@@ -52,7 +52,7 @@ export default function Radar() {
     fetchDrivers();
 
     // Subscribe to real-time changes
-    const channel = supabase.channel('public:profiles')
+    const channel = supabase.channel('radar_profiles_sync')
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: "role=eq.'Supir'" }, (payload) => {
          setRealAmbulances(prev => {
             const newList = [...prev];
