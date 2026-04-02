@@ -22,13 +22,15 @@ export interface UserProfile {
   full_name: string;
 }
 
+export type DriverStatusType = 'STANDBY' | 'ON_JOB' | 'OFFLINE' | 'ON_RESPONSE' | 'ON_DUTY';
+
 interface AppState {
   userProfile: UserProfile | null;
   role: UserRole;
   isVerified: boolean;
   userCoords: [number, number];
   activeSOS: ActiveSOS | null;
-  driverStatus: 'STANDBY' | 'ON_JOB' | 'OFFLINE';
+  driverStatus: DriverStatusType;
   
   setUserProfile: (profile: UserProfile | null) => void;
   setRole: (role: UserRole) => void;
@@ -42,7 +44,7 @@ interface AppState {
   resetSOS: () => void;
   
   // Driver Actions
-  setDriverStatus: (status: 'STANDBY' | 'ON_JOB' | 'OFFLINE') => void;
+  setDriverStatus: (status: DriverStatusType) => void;
 }
 
 // Create a Supabase Realtime channel for global network sync
