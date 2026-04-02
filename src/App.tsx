@@ -32,21 +32,22 @@ function App() {
           </RoleGuard>
         } />
         
-        <Route path="/driver" element={
-          <RoleGuard allowedRoles={['Supir']}>
-            <DriverDashboard />
-          </RoleGuard>
-        } />
-
-        {/* Warga routes */}
+        {/* App routes */}
         <Route path="/" element={<Layout />}>
           <Route index element={
             <RoleGuard allowedRoles={['Masyarakat']}>
               <Home />
             </RoleGuard>
           } />
+          
+          <Route path="driver" element={
+            <RoleGuard allowedRoles={['Supir']}>
+              <DriverDashboard />
+            </RoleGuard>
+          } />
+
           <Route path="radar" element={
-            <RoleGuard allowedRoles={['Masyarakat']}>
+            <RoleGuard allowedRoles={['Masyarakat', 'Supir', 'Relawan', 'Mitra']}>
               <Radar />
             </RoleGuard>
           } />
@@ -56,12 +57,12 @@ function App() {
             </RoleGuard>
           } />
           <Route path="pesan" element={
-            <RoleGuard allowedRoles={['Masyarakat']}>
+            <RoleGuard allowedRoles={['Masyarakat', 'Supir', 'Relawan', 'Mitra', 'PEMDES', 'DPMD']}>
               <Messages />
             </RoleGuard>
           } />
           <Route path="profil" element={
-            <RoleGuard allowedRoles={['Masyarakat', 'Relawan', 'Mitra']}>
+            <RoleGuard allowedRoles={['Masyarakat', 'Relawan', 'Mitra', 'Supir']}>
               <Profile />
             </RoleGuard>
           } />

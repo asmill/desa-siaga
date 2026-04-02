@@ -1,6 +1,6 @@
 import { renderToString } from 'react-dom/server';
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMapEvents } from 'react-leaflet';
-import { Activity, MapPin, Ambulance, User, Settings2, Shield } from 'lucide-react';
+import { Activity, MapPin, Ambulance, User, Settings2 } from 'lucide-react';
 import L from 'leaflet';
 import { useStore } from '../store/useStore';
 
