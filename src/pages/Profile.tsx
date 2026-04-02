@@ -24,7 +24,6 @@ export default function Profile() {
   const [regencies, setRegencies] = useState<any[]>([]);
   const [districts, setDistricts] = useState<any[]>([]);
   const [villages, setVillages] = useState<any[]>([]);
-  const [regionReady, setRegionReady] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -81,7 +80,6 @@ export default function Profile() {
            }
         }
         setFormData(fData);
-        setRegionReady(true);
       }
     } catch (err) {
       console.error(err);
