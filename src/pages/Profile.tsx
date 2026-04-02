@@ -167,12 +167,44 @@ export default function Profile() {
               <input className="input-base" value={formData.full_name} onChange={e => setFormData({...formData, full_name: e.target.value})} disabled={!isEditing} />
             </div>
 
-            <div>
-              <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Nomor Induk Kependudukan (KTP)</label>
-              <input className="input-base" value={formData.ktp} onChange={e => setFormData({...formData, ktp: e.target.value})} disabled={!isEditing} />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Nomor Induk Kependudukan (KTP)</label>
+                <input className="input-base" value={formData.ktp} onChange={e => setFormData({...formData, ktp: e.target.value})} disabled={!isEditing} />
+              </div>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Jenis Kelamin</label>
+                <select className="input-base" value={formData.gender} onChange={e => setFormData({...formData, gender: e.target.value})} disabled={!isEditing} style={{ padding: '12px' }}>
+                  <option value="">Pilih</option>
+                  <option value="L">Laki-laki</option>
+                  <option value="P">Perempuan</option>
+                </select>
+              </div>
             </div>
             
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Provinsi</label>
+                <input className="input-base" placeholder="Cth: JAWA BARAT" value={formData.province} onChange={e => setFormData({...formData, province: e.target.value})} disabled={!isEditing} />
+              </div>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Kabupaten</label>
+                <input className="input-base" placeholder="Cth: SUBANG" value={formData.regency} onChange={e => setFormData({...formData, regency: e.target.value})} disabled={!isEditing} />
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Kecamatan</label>
+                <input className="input-base" placeholder="Cth: JALANCAGAK" value={formData.district} onChange={e => setFormData({...formData, district: e.target.value})} disabled={!isEditing} />
+              </div>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Desa</label>
+                <input className="input-base" placeholder="Cth: CIKALONG" value={formData.village} onChange={e => setFormData({...formData, village: e.target.value})} disabled={!isEditing} />
+              </div>
+            </div>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
               <div>
                 <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>RT</label>
                 <input className="input-base" value={formData.rt} onChange={e => setFormData({...formData, rt: e.target.value})} disabled={!isEditing} />
@@ -181,11 +213,10 @@ export default function Profile() {
                 <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>RW</label>
                 <input className="input-base" value={formData.rw} onChange={e => setFormData({...formData, rw: e.target.value})} disabled={!isEditing} />
               </div>
-            </div>
-
-            <div>
-              <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Dusun</label>
-              <input className="input-base" value={formData.dusun} onChange={e => setFormData({...formData, dusun: e.target.value})} disabled={!isEditing} />
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Dusun</label>
+                <input className="input-base" value={formData.dusun} onChange={e => setFormData({...formData, dusun: e.target.value})} disabled={!isEditing} />
+              </div>
             </div>
 
             <div>
