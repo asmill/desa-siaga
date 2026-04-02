@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { User, ShieldCheck, ShieldAlert, Edit3, Ambulance, Loader2, Save } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { supabase } from '../services/supabaseClient';
+import { getProvinces, getRegencies, getDistricts, getVillages } from '../services/regionService';
 
 export default function Profile() {
   const { userProfile, role, isVerified, setUserProfile } = useStore();
@@ -14,46 +15,80 @@ export default function Profile() {
   
   const [ambulances, setAmbulances] = useState<any[]>([]);
   const [formData, setFormData] = useState({
-    ktp: '', full_name: '', gender: 'L', phone: '',
-    dusun: '', rt: '', rw: '', village: '', district: '', 
-    regency: '', province: '', address: '', vehicle_id: ''
+    phone: '', full_name: '', ktp: '', gender: '',
+    dusun: '', rt: '', rw: '', village: '', district: '', regency: '', province: '', address: '', vehicle_id: '',
+    provinceId: '', regencyId: '', districtId: '', villageId: ''
   });
+
+  const [provinces, setProvinces] = useState<any[]>([]);
+  const [regencies, setRegencies] = useState<any[]>([]);
+  const [districts, setDistricts] = useState<any[]>([]);
+  const [villages, setVillages] = useState<any[]>([]);
+  const [regionReady, setRegionReady] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!userProfile?.phone) return;
+      if (!userProfile) return;
       setLoading(true);
       try {
-        // Fetch Profile
-        const { data: profile } = await supabase.from('profiles').select('*').eq('phone', userProfile.phone).single();
-        if (profile) {
-           setFormData({
-             ktp: profile.ktp || '', full_name: profile.full_name || '', gender: profile.gender || 'L',
-             phone: profile.phone || '', dusun: profile.dusun || '', rt: profile.rt || '',
-             rw: profile.rw || '', village: profile.village || '', district: profile.district || '',
-             regency: profile.regency || '', province: profile.province || '', address: profile.address || '',
-             vehicle_id: '' 
-           });
-        }
+      const { data } = await supabase.from('profiles').select('*').eq('phone', userProfile.phone).single();
+      if (data) {
+        let fData = {
+          phone: data.phone || '', full_name: data.full_name || '', ktp: data.ktp || '', 
+          gender: data.gender || '', dusun: data.dusun || '', rt: data.rt || '', 
+          rw: data.rw || '', village: data.village || '', district: data.district || '', 
+          regency: data.regency || '', province: data.province || '', address: data.address || '',
+          vehicle_id: '', provinceId: '', regencyId: '', districtId: '', villageId: ''
+        };
         
-        // Fetch Ambulances for Driver
         if (role === 'Supir') {
-           const { data: amb } = await supabase.from('ambulances').select('*');
-           if (amb) {
-              setAmbulances(amb);
-              // Find the one that currently has this driver_id
-              const myAmb = amb.find(a => a.driver_id === profile?.id);
-              if (myAmb) {
-                 setFormData(prev => ({...prev, vehicle_id: myAmb.id}));
+          const { data: ambData } = await supabase.from('ambulances').select('*').eq('driver_id', data.id).single();
+          if (ambData) fData.vehicle_id = ambData.id;
+          
+          const { data: allAmb } = await supabase.from('ambulances').select('*');
+          if (allAmb) setAmbulances(allAmb);
+        }
+
+        setFormData(fData);
+
+        // Preload EMSIFA API Regions
+        const provs = await getProvinces();
+        setProvinces(provs);
+        
+        if (fData.province) {
+           const pItem = provs.find((p: any) => p.name === fData.province);
+           if (pItem) {
+              fData.provinceId = pItem.id;
+              const regs = await getRegencies(pItem.id);
+              setRegencies(regs);
+              
+              const rItem = regs.find((r: any) => r.name === fData.regency);
+              if (rItem) {
+                 fData.regencyId = rItem.id;
+                 const dists = await getDistricts(rItem.id);
+                 setDistricts(dists);
+
+                 const dItem = dists.find((d: any) => d.name === fData.district);
+                 if (dItem) {
+                    fData.districtId = dItem.id;
+                    const vills = await getVillages(dItem.id);
+                    setVillages(vills);
+                    
+                    const vItem = vills.find((v: any) => v.name === fData.village);
+                    if (vItem) fData.villageId = vItem.id;
+                 }
               }
            }
         }
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
+        setFormData(fData);
+        setRegionReady(true);
       }
-    };
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
     fetchData();
   }, [userProfile, role]);
 
@@ -99,6 +134,24 @@ export default function Profile() {
      } finally {
        setSavingAmb(false);
      }
+  };
+
+  const handleProvinceChange = async (id: string, name: string) => {
+    setFormData({ ...formData, province: name, provinceId: id, regency: '', district: '', village: '' });
+    const data = await getRegencies(id);
+    setRegencies(data);
+  };
+
+  const handleRegencyChange = async (id: string, name: string) => {
+    setFormData({ ...formData, regency: name, regencyId: id, district: '', village: '' });
+    const data = await getDistricts(id);
+    setDistricts(data);
+  };
+
+  const handleDistrictChange = async (id: string, name: string) => {
+    setFormData({ ...formData, district: name, districtId: id, village: '' });
+    const data = await getVillages(id);
+    setVillages(data);
   };
 
   const handleLogout = () => {
@@ -185,22 +238,50 @@ export default function Profile() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
                 <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Provinsi</label>
-                <input className="input-base" placeholder="Cth: JAWA BARAT" value={formData.province} onChange={e => setFormData({...formData, province: e.target.value})} disabled={!isEditing} />
+                {!isEditing ? (
+                   <input className="input-base" value={formData.province} disabled />
+                ) : (
+                   <select className="input-base" style={{ padding: '12px' }} value={formData.provinceId} onChange={e => handleProvinceChange(e.target.value, e.target.options[e.target.selectedIndex].text)}>
+                     <option value="">Pilih Provinsi</option>
+                     {provinces.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                   </select>
+                )}
               </div>
               <div>
                 <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Kabupaten</label>
-                <input className="input-base" placeholder="Cth: SUBANG" value={formData.regency} onChange={e => setFormData({...formData, regency: e.target.value})} disabled={!isEditing} />
+                {!isEditing ? (
+                   <input className="input-base" value={formData.regency} disabled />
+                ) : (
+                   <select className="input-base" style={{ padding: '12px' }} value={formData.regencyId} onChange={e => handleRegencyChange(e.target.value, e.target.options[e.target.selectedIndex].text)} disabled={!regencies.length}>
+                     <option value="">Pilih Kabupaten</option>
+                     {regencies.map((r: any) => <option key={r.id} value={r.id}>{r.name}</option>)}
+                   </select>
+                )}
               </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
                 <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Kecamatan</label>
-                <input className="input-base" placeholder="Cth: JALANCAGAK" value={formData.district} onChange={e => setFormData({...formData, district: e.target.value})} disabled={!isEditing} />
+                {!isEditing ? (
+                   <input className="input-base" value={formData.district} disabled />
+                ) : (
+                   <select className="input-base" style={{ padding: '12px' }} value={formData.districtId} onChange={e => handleDistrictChange(e.target.value, e.target.options[e.target.selectedIndex].text)} disabled={!districts.length}>
+                     <option value="">Pilih Kecamatan</option>
+                     {districts.map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                   </select>
+                )}
               </div>
               <div>
                 <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Desa</label>
-                <input className="input-base" placeholder="Cth: CIKALONG" value={formData.village} onChange={e => setFormData({...formData, village: e.target.value})} disabled={!isEditing} />
+                {!isEditing ? (
+                   <input className="input-base" value={formData.village} disabled />
+                ) : (
+                   <select className="input-base" style={{ padding: '12px' }} value={formData.villageId} onChange={e => setFormData({...formData, village: e.target.options[e.target.selectedIndex].text, villageId: e.target.value})} disabled={!villages.length}>
+                     <option value="">Pilih Desa</option>
+                     {villages.map((v: any) => <option key={v.id} value={v.id}>{v.name}</option>)}
+                   </select>
+                )}
               </div>
             </div>
             
