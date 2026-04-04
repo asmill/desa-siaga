@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 import { supabase } from '../services/supabaseClient';
 
 export type UserRole = 'Admin' | 'DPMD' | 'PEMDES' | 'Relawan' | 'Mitra' | 'Masyarakat' | 'Supir';
-export type SOSStatus = 'IDLE' | 'PENDING' | 'ACCEPTED' | 'ARRIVED' | 'COMPLETED';
+export type SOSStatus = 'IDLE' | 'PENDING' | 'ACCEPTED' | 'ARRIVED_AT_SCENE' | 'EN_ROUTE_TO_HOSPITAL' | 'COMPLETED';
 
 interface ActiveSOS {
   id?: string;
@@ -11,9 +11,22 @@ interface ActiveSOS {
   patientCoords: [number, number];
   status: SOSStatus;
   driverName?: string;
+  targetedDriverId?: string;
   eta?: number;
   emergencyType: string;
   locationMethod: string;
+}
+
+// Distance Helper (Haversine Formula) in KM
+export function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; 
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
 }
 
 export interface UserProfile {
@@ -67,6 +80,30 @@ export const useStore = create<AppState>()(
         const { userProfile } = get();
         if (!userProfile) return;
 
+        let targetedDriverId = null;
+        
+        // Find closest standby driver
+        try {
+          const { data: drivers } = await supabase.from('profiles').select('*')
+              .eq('role', 'Supir')
+              .eq('driver_status', 'STANDBY');
+          
+          if (drivers && drivers.length > 0) {
+             let minDistance = Infinity;
+             for (const d of drivers) {
+                if (d.lat && d.lng) {
+                   const dist = getDistance(coords[0], coords[1], d.lat, d.lng);
+                   if (dist < minDistance) {
+                      minDistance = dist;
+                      targetedDriverId = d.id;
+                   }
+                }
+             }
+          }
+        } catch(e) {
+          console.error("Failed to find closest driver", e);
+        }
+
         // Insert into Supabase
         const { data, error } = await supabase.from('sos_events').insert({
           patient_id: userProfile.id,
@@ -75,7 +112,8 @@ export const useStore = create<AppState>()(
           patient_lng: coords[1],
           emergency_type: emergencyType,
           location_method: locationMethod,
-          status: 'PENDING'
+          status: 'PENDING',
+          targeted_driver_id: targetedDriverId
         }).select().single();
 
         if (error) {
@@ -83,41 +121,54 @@ export const useStore = create<AppState>()(
           return;
         }
 
-        const activeSOS = { id: data.id, patientName: name, patientCoords: coords as [number, number], status: 'PENDING' as SOSStatus, emergencyType, locationMethod };
+        const activeSOS = { id: data.id, patientName: name, patientCoords: coords as [number, number], status: 'PENDING' as SOSStatus, emergencyType, locationMethod, targetedDriverId };
         set({ activeSOS });
-        console.log(`[SYNC] Sending SOS: ${name}`, activeSOS);
       },
       acceptSOS: async (driverName) => {
         const { activeSOS, userProfile } = get();
         if (activeSOS && activeSOS.id && userProfile) {
           const { error } = await supabase.from('sos_events').update({ 
             status: 'ACCEPTED', 
+            accepted_at: new Date().toISOString(),
             driver_id: userProfile.id, 
             driver_name: driverName 
           }).eq('id', activeSOS.id);
 
           if (!error) {
-            set({ driverStatus: 'ON_JOB' });
-            console.log(`[SYNC] Accepting SOS: ${driverName}`);
+            set({ driverStatus: 'ON_RESPONSE' });
+            get().setDriverStatus('ON_RESPONSE'); // To trigger DB sync
           }
         }
       },
       updateSOSStatus: async (status) => {
         const { activeSOS } = get();
         if (activeSOS && activeSOS.id) {
-          await supabase.from('sos_events').update({ status }).eq('id', activeSOS.id);
+          const updateData: any = { status };
+          if (status === 'ARRIVED_AT_SCENE') updateData.arrived_at = new Date().toISOString();
+          if (status === 'EN_ROUTE_TO_HOSPITAL') updateData.en_route_hospital_at = new Date().toISOString();
+          
+          await supabase.from('sos_events').update(updateData).eq('id', activeSOS.id);
         }
       },
       resetSOS: async () => {
         const { activeSOS } = get();
         if (activeSOS && activeSOS.id) {
-            // Ideally we mark it COMPLETED directly rather than delete, or client just resets local state
-            await supabase.from('sos_events').update({ status: 'COMPLETED' }).eq('id', activeSOS.id);
+            await supabase.from('sos_events').update({ 
+                status: 'COMPLETED',
+                completed_at: new Date().toISOString()
+            }).eq('id', activeSOS.id);
         }
         set({ activeSOS: null, driverStatus: 'STANDBY' });
+        get().setDriverStatus('STANDBY'); // sync
       },
       
-      setDriverStatus: (status) => set({ driverStatus: status })
+      setDriverStatus: async (status) => {
+         set({ driverStatus: status });
+         const { userProfile } = get();
+         if (userProfile) {
+            await supabase.from('profiles').update({ driver_status: status }).eq('id', userProfile.id);
+         }
+      }
     }),
     {
       name: 'desasiaga-storage',
@@ -142,7 +193,8 @@ if (typeof window !== 'undefined') {
           status: data.status as SOSStatus,
           emergencyType: data.emergency_type,
           locationMethod: data.location_method,
-          driverName: data.driver_name
+          driverName: data.driver_name,
+          targetedDriverId: data.targeted_driver_id
         };
         
         if (mappedSOS.status === 'COMPLETED') {

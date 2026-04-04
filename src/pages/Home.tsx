@@ -207,8 +207,8 @@ export default function Home() {
 
     if ("geolocation" in navigator) {
       const timeout = setTimeout(() => {
+        alert('Posisi GPS belum sinkron dengan posisi baru, Ambulan akan diarahkan ke Alamat Rumah User');
         sendSOS(userCoords, 'Otomatis (Akurasi Rendah)');
-        alert('Gagal mendapatkan GPS terkini dalam waktu cepat. Menggunakan koordinat perkiraan.');
       }, 5000);
 
       navigator.geolocation.getCurrentPosition(
@@ -219,11 +219,13 @@ export default function Home() {
         },
         () => {
           clearTimeout(timeout);
+          alert('Posisi GPS belum sinkron dengan posisi baru, Ambulan akan diarahkan ke Alamat Rumah User');
           sendSOS(userCoords, 'Otomatis (Akurasi Rendah)');
         },
         { enableHighAccuracy: true, timeout: 5000 }
       );
     } else {
+      alert('Posisi GPS belum sinkron dengan posisi baru, Ambulan akan diarahkan ke Alamat Rumah User');
       sendSOS(userCoords, 'Otomatis (Akurasi Rendah)');
     }
   };
@@ -293,7 +295,26 @@ export default function Home() {
     );
   }
 
-  if (status === 'ACCEPTED' || status === 'ARRIVED') {
+  if (['ACCEPTED', 'ARRIVED_AT_SCENE', 'EN_ROUTE_TO_HOSPITAL'].includes(status)) {
+    
+    // Dynamic styling based on status
+    let statusTitle = 'Ambulans Sedang Meluncur!';
+    let statusDesc = `Estimasi tiba: ${eta} Menit. Harap bersiap.`;
+    let mainColor = '#dc2626';
+    let bgColor = '#fef2f2';
+    
+    if (status === 'ARRIVED_AT_SCENE') {
+       statusTitle = 'Ambulans Telah Tiba di Lokasi!';
+       statusDesc = 'Silakan bersiap untuk naik ke unit.';
+       mainColor = '#059669';
+       bgColor = '#d1fae5';
+    } else if (status === 'EN_ROUTE_TO_HOSPITAL') {
+       statusTitle = 'Sedang Menuju Rumah Sakit';
+       statusDesc = 'Membawa pasien ke Fasilitas Kesehatan terdekat.';
+       mainColor = '#2563eb';
+       bgColor = '#eff6ff';
+    }
+
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#f8fafc', overflow: 'hidden' }}>
         <div style={{ flex: 1, position: 'relative' }}>
@@ -328,16 +349,16 @@ export default function Home() {
           </MapContainer>
 
           <div style={{ position: 'absolute', top: 20, left: 20, right: 20, zIndex: 1000 }}>
-            <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '16px', backgroundColor: 'white', borderLeft: `6px solid ${status === 'ARRIVED' ? '#059669' : '#dc2626'}`, boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}>
-              <div style={{ padding: '8px', backgroundColor: status === 'ARRIVED' ? '#d1fae5' : '#fef2f2', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {status === 'ARRIVED' ? <CheckCircle2 size={32} color="#059669" /> : <Siren size={32} color="#dc2626" className="animate-pulse" />}
+            <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '16px', backgroundColor: 'white', borderLeft: `6px solid ${mainColor}`, boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}>
+              <div style={{ padding: '8px', backgroundColor: bgColor, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {status === 'ACCEPTED' ? <Siren size={32} color={mainColor} className="animate-pulse" /> : <CheckCircle2 size={32} color={mainColor} />}
               </div>
               <div style={{ flex: 1 }}>
-                <h3 style={{ fontSize: '17px', fontWeight: 700, color: status === 'ARRIVED' ? '#065f46' : 'var(--text-main)', margin: 0 }}>
-                  {status === 'ARRIVED' ? 'Ambulans Telah Tiba!' : 'Ambulans Sedang Meluncur!'}
+                <h3 style={{ fontSize: '17px', fontWeight: 700, color: status === 'ACCEPTED' ? 'var(--text-main)' : mainColor, margin: 0 }}>
+                  {statusTitle}
                 </h3>
                 <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '4px 0 0 0', fontWeight: 500 }}>
-                  {status === 'ARRIVED' ? 'Silakan bersiap untuk naik.' : `Estimasi tiba: ${eta} Menit. Harap bersiap.`}
+                  {statusDesc}
                 </p>
               </div>
             </div>
@@ -351,7 +372,7 @@ export default function Home() {
             </div>
             <div style={{ flex: 1 }}>
               <h4 style={{ margin: 0, fontSize: '16px' }}>{activeSOS?.driverName || 'Supardi'} (Supir)</h4>
-              <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)' }}>Suzuki APV - T 1234 XY</p>
+              <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)' }}>Ambulans Siaga Desa</p>
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
               <button 
@@ -367,15 +388,15 @@ export default function Home() {
               </button>
             </div>
           </div>
-          {status !== 'ARRIVED' && (
+          {status === 'ACCEPTED' && (
             <button onClick={cancelSOS} className="btn" style={{ width: '100%', backgroundColor: '#fef2f2', color: 'var(--primary-red)', border: 'none' }}>
               Batalkan Darurat
             </button>
           )}
-          {status === 'ARRIVED' && (
-            <button onClick={() => resetSOS()} className="btn btn-primary" style={{ width: '100%' }}>
-              Selesaikan Panggilan
-            </button>
+          {(status === 'EN_ROUTE_TO_HOSPITAL' || status === 'ARRIVED_AT_SCENE') && (
+            <div style={{ textAlign: 'center', fontSize: '14px', color: 'var(--text-muted)', marginTop: '10px', padding: '10px', backgroundColor: '#f8fafc', borderRadius: '8px' }}>
+              Proses sedang berlangsung. Anda tidak dapat membatalkan lagi.
+            </div>
           )}
         </div>
 
