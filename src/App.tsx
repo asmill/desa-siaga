@@ -11,11 +11,31 @@ import ProfileSetup from './pages/ProfileSetup';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminUsers from './pages/admin/AdminUsers';
 import DriverDashboard from './pages/driver/DriverDashboard';
-import './App.css';
+import { useStore } from './store/useStore';
+import { AlertCircle, CheckCircle } from 'lucide-react';
+
+function ToastContainer() {
+  const { notification } = useStore();
+  if (!notification || !notification.show) return null;
+  
+  return (
+    <div style={{
+      position: 'fixed', top: '24px', left: '50%', transform: 'translateX(-50%)',
+      backgroundColor: notification.type === 'error' ? '#ef4444' : notification.type === 'success' ? '#10b981' : '#3b82f6',
+      color: 'white', padding: '16px 24px', borderRadius: '12px', zIndex: 99999,
+      display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+      minWidth: '300px', fontWeight: 600, fontSize: '14px'
+    }}>
+       {notification.type === 'error' ? <AlertCircle size={20}/> : <CheckCircle size={20}/>}
+       {notification.message}
+    </div>
+  )
+}
 
 function App() {
   return (
     <BrowserRouter>
+      <ToastContainer />
       <Routes>
         <Route path="/login" element={<Register />} />
         <Route path="/setup-profile" element={<ProfileSetup />} />

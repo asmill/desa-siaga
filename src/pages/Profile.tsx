@@ -5,7 +5,7 @@ import { supabase } from '../services/supabaseClient';
 import { getProvinces, getRegencies, getDistricts, getVillages } from '../services/regionService';
 
 export default function Profile() {
-  const { userProfile, role, isVerified, setUserProfile } = useStore();
+  const { userProfile, role, isVerified, setUserProfile, showNotification } = useStore();
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -104,11 +104,11 @@ export default function Profile() {
       if (profErr) throw profErr;
 
       setUserProfile({ ...userProfile, full_name: formData.full_name } as any);
-      alert('Profil demografi berhasil diperbarui!');
+      showNotification('Profil demografi berhasil diperbarui!', 'success');
       setIsEditing(false);
     } catch (err) {
       console.error(err);
-      alert('Gagal memperbarui profil');
+      showNotification('Gagal memperbarui profil', 'error');
     } finally {
       setSaving(false);
     }
@@ -124,11 +124,11 @@ export default function Profile() {
          // Assign to new
          await supabase.from('ambulances').update({ driver_id: userProfile?.id }).eq('id', formData.vehicle_id);
        }
-       alert('Unit Ambulan yang bertugas berhasil diperbarui!');
+       showNotification('Unit Ambulan yang bertugas berhasil diperbarui!', 'success');
        setIsEditingAmb(false);
      } catch(err) {
        console.error(err);
-       alert('Gagal memperbarui data ambulan');
+       showNotification('Gagal memperbarui data ambulan', 'error');
      } finally {
        setSavingAmb(false);
      }

@@ -4,7 +4,7 @@ import { useStore } from '../../store/useStore';
 import { supabase } from '../../services/supabaseClient';
 
 export default function DriverDashboard() {
-  const { activeSOS, acceptSOS, updateSOSStatus, resetSOS, driverStatus, setDriverStatus, setUserCoords, userProfile, chatMessages, sendChatMessage } = useStore();
+  const { activeSOS, acceptSOS, updateSOSStatus, resetSOS, driverStatus, setDriverStatus, setUserCoords, userProfile, chatMessages, sendChatMessage, showNotification } = useStore();
   const [bookings, setBookings] = useState<any[]>([]);
   const [historyLog, setHistoryLog] = useState<any[]>([]);
   const [selectedDestination, setSelectedDestination] = useState<string>("RSUD Terpadu Subang (3KM)");
@@ -54,9 +54,9 @@ export default function DriverDashboard() {
             if (userProfile?.phone) {
                await supabase.from('profiles').update({ lat: newCoords[0], lng: newCoords[1] }).eq('phone', userProfile.phone);
             }
-            alert('Lokasi GPS berhasil disinkronkan ke sistem Radar!');
+            showNotification('Lokasi GPS berhasil disinkronkan ke sistem Radar!', 'success');
          }, 
-         () => alert('Gagal membaca GPS. Izinkan akses lokasi browser Anda!')
+         () => showNotification('Gagal membaca GPS. Izinkan akses lokasi browser Anda!', 'error')
        );
      }
   };

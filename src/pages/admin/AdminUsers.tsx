@@ -16,7 +16,7 @@ interface MockUser {
 }
 
 export default function AdminUsers() {
-  const { role: currentUserRole } = useStore();
+  const { role: currentUserRole, showNotification } = useStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -365,11 +365,11 @@ export default function AdminUsers() {
                 setSavingUser(false);
 
                 if (error) {
-                  alert('Gagal menyimpa: ' + error.message);
+                  showNotification('Gagal menyimpan: ' + error.message, 'error');
                 } else {
                   setShowAddModal(false); 
                   fetchUsers();
-                  alert('Akun pengguna berhasil didaftarkan ke sistem. Mereka bisa login via OTP (123456).'); 
+                  showNotification('Akun pengguna berhasil didaftarkan. Mereka bisa login dengan sandi 123456.', 'success');
                 }
               }} className="btn btn-primary" style={{ flex: 2, padding: '14px', fontWeight: 800 }}>
                 {savingUser ? <Loader2 className="animate-spin" /> : 'Simpan & Daftarkan Pengguna'}

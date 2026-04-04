@@ -54,12 +54,13 @@ interface AppState {
   activeSOS: ActiveSOS | null;
   driverStatus: DriverStatusType;
   chatMessages: SOSMessage[];
-  
+  notification: { show: boolean, message: string, type: 'success' | 'error' | 'info' } | null;
   
   setUserProfile: (profile: UserProfile | null) => void;
   setRole: (role: UserRole) => void;
   setIsVerified: (status: boolean) => void;
   setUserCoords: (coords: [number, number]) => void;
+  showNotification: (message: string, type?: 'success' | 'error' | 'info') => void;
   
   // SOS Actions
   triggerSOS: (name: string, coords: [number, number], emergencyType: string, locationMethod: string) => void;
@@ -86,11 +87,21 @@ export const useStore = create<AppState>()(
       activeSOS: null,
       driverStatus: 'STANDBY',
       chatMessages: [],
+      notification: null,
 
       setUserProfile: (profile) => set({ userProfile: profile }),
       setRole: (role) => set({ role }),
       setIsVerified: (status) => set({ isVerified: status }),
       setUserCoords: (coords) => set({ userCoords: coords }),
+      
+      showNotification: (message, type = 'info') => {
+        set({ notification: { show: true, message, type } });
+        // Auto hide after 3.5s
+        setTimeout(() => {
+           const current = get().notification;
+           if (current?.message === message) set({ notification: null });
+        }, 3500);
+      },
 
       triggerSOS: async (name, coords, emergencyType, locationMethod) => {
         const { userProfile } = get();

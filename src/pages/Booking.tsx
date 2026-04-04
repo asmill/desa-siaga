@@ -3,6 +3,7 @@ import { Calendar, MapPin, Activity, FileText, ChevronLeft, Navigation, Loader2 
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import { useStore } from '../store/useStore';
+import { useNavigate } from 'react-router-dom';
 
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -26,7 +27,8 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
 }
 
 export default function Booking() {
-  const { userCoords } = useStore();
+  const { userCoords, showNotification } = useStore();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'pesan' | 'riwayat'>('pesan');
   const [formData, setFormData] = useState({
     date: '',
@@ -86,8 +88,8 @@ export default function Booking() {
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
-      alert('Berhasil! Permintaan peminjaman ambulans Anda telah dikirim ke PEMDES.');
-      window.location.href = '/';
+      showNotification('Berhasil! Permintaan peminjaman ambulans Anda telah dikirim ke PEMDES.', 'success');
+      navigate('/');
     }, 1500);
   };
 

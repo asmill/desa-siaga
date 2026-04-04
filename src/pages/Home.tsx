@@ -83,7 +83,7 @@ function MapCenterSync({ coords }: { coords: [number, number] }) {
 
 
 export default function Home() {
-  const { isVerified, userProfile, userCoords, activeSOS, triggerSOS, resetSOS, role, chatMessages, sendChatMessage } = useStore();
+  const { isVerified, userProfile, userCoords, activeSOS, triggerSOS, resetSOS, role, chatMessages, sendChatMessage, showNotification } = useStore();
   const navigate = useNavigate();
   const [searchingProgress, setSearchingProgress] = useState(0);
   
@@ -175,7 +175,7 @@ export default function Home() {
 
   const handleSOSClick = () => {
     if (!isVerified) {
-      alert('Akun Anda belum Diverifikasi oleh Pemerintah Desa. Tombol Darurat belum aktif.');
+      showNotification('Akun Anda belum Diverifikasi oleh Pemerintah Desa. Tombol Darurat belum aktif.', 'error');
       return;
     }
     setCustomLocation(userCoords); // Reset to default
@@ -204,7 +204,7 @@ export default function Home() {
 
     if ("geolocation" in navigator) {
       const timeout = setTimeout(() => {
-        alert('Posisi GPS belum sinkron dengan posisi baru, Ambulan akan diarahkan ke Alamat Rumah User');
+        showNotification('GPS lambat. Ambulan diarahkan ke Alamat Rumah.', 'error');
         sendSOS(userCoords, 'Otomatis (Akurasi Rendah)');
       }, 5000);
 
@@ -216,13 +216,13 @@ export default function Home() {
         },
         () => {
           clearTimeout(timeout);
-          alert('Posisi GPS belum sinkron dengan posisi baru, Ambulan akan diarahkan ke Alamat Rumah User');
+          showNotification('Akses GPS ditolak. Ambulan diarahkan ke Alamat Rumah.', 'error');
           sendSOS(userCoords, 'Otomatis (Akurasi Rendah)');
         },
         { enableHighAccuracy: true, timeout: 5000 }
       );
     } else {
-      alert('Posisi GPS belum sinkron dengan posisi baru, Ambulan akan diarahkan ke Alamat Rumah User');
+      showNotification('GPS tidak didukung peramban. Menggunakan Alamat Rumah.', 'error');
       sendSOS(userCoords, 'Otomatis (Akurasi Rendah)');
     }
   };

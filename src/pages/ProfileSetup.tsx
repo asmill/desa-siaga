@@ -20,6 +20,7 @@ L.Icon.Default.mergeOptions({
 export default function ProfileSetup() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { showNotification } = useStore();
   const statePhone = location.state?.phone || '';
   
   const [step, setStep] = useState(1);
@@ -116,7 +117,7 @@ export default function ProfileSetup() {
         setLoading(false);
       },
       (_err) => {
-        alert('Gagal mengambil lokasi. Pastikan GPS aktif.');
+        showNotification('Gagal mengambil lokasi. Pastikan GPS aktif.', 'error');
         setLoading(false);
       }
     );
@@ -285,14 +286,14 @@ export default function ProfileSetup() {
               setLoading(false);
 
               if (error) {
-                alert('Gagal menyimpan profil: ' + error.message);
+                showNotification('Gagal menyimpan profil: ' + error.message, 'error');
               } else {
                 useStore.setState({ 
                   userProfile: { id: data.id, phone: data.phone, full_name: data.full_name },
                   role: 'Masyarakat',
                   isVerified: true
                 });
-                alert('Profil berhasil disimpan! Akun Anda sudah diverifikasi.');
+                showNotification('Profil berhasil disimpan! Akun Anda sudah diverifikasi.', 'success');
                 navigate('/');
               }
             } else {
