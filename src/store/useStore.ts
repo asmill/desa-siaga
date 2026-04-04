@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 import { supabase } from '../services/supabaseClient';
 
 export type UserRole = 'Admin' | 'DPMD' | 'PEMDES' | 'Relawan' | 'Mitra' | 'Masyarakat' | 'Supir';
-export type SOSStatus = 'IDLE' | 'PENDING' | 'ACCEPTED' | 'ARRIVED_AT_SCENE' | 'EN_ROUTE_TO_HOSPITAL' | 'COMPLETED';
+export type SOSStatus = 'IDLE' | 'PENDING' | 'ACCEPTED' | 'ARRIVED_AT_SCENE' | 'EN_ROUTE_TO_HOSPITAL' | 'AT_DESTINATION' | 'RETURNING_TO_BASE' | 'COMPLETED';
 
 interface ActiveSOS {
   id?: string;
@@ -12,9 +12,18 @@ interface ActiveSOS {
   status: SOSStatus;
   driverName?: string;
   targetedDriverId?: string;
+  destinationName?: string;
   eta?: number;
   emergencyType: string;
   locationMethod: string;
+}
+
+export interface SOSMessage {
+  id: string;
+  sender_name: string;
+  sender_id: string;
+  message: string;
+  created_at: string;
 }
 
 // Distance Helper (Haversine Formula) in KM
@@ -44,6 +53,8 @@ interface AppState {
   userCoords: [number, number];
   activeSOS: ActiveSOS | null;
   driverStatus: DriverStatusType;
+  chatMessages: SOSMessage[];
+  
   
   setUserProfile: (profile: UserProfile | null) => void;
   setRole: (role: UserRole) => void;
@@ -53,8 +64,12 @@ interface AppState {
   // SOS Actions
   triggerSOS: (name: string, coords: [number, number], emergencyType: string, locationMethod: string) => void;
   acceptSOS: (driverName: string) => void;
-  updateSOSStatus: (status: SOSStatus) => void;
+  updateSOSStatus: (status: SOSStatus, destinationName?: string) => void;
   resetSOS: () => void;
+  
+  // Chat Actions
+  sendChatMessage: (message: string) => void;
+  fetchChatMessages: (eventId: string) => void;
   
   // Driver Actions
   setDriverStatus: (status: DriverStatusType) => void;
@@ -70,6 +85,7 @@ export const useStore = create<AppState>()(
       userCoords: [-6.621000, 107.771000], 
       activeSOS: null,
       driverStatus: 'STANDBY',
+      chatMessages: [],
 
       setUserProfile: (profile) => set({ userProfile: profile }),
       setRole: (role) => set({ role }),
@@ -140,12 +156,17 @@ export const useStore = create<AppState>()(
           }
         }
       },
-      updateSOSStatus: async (status) => {
+      updateSOSStatus: async (status, destinationName) => {
         const { activeSOS } = get();
         if (activeSOS && activeSOS.id) {
           const updateData: any = { status };
           if (status === 'ARRIVED_AT_SCENE') updateData.arrived_at = new Date().toISOString();
-          if (status === 'EN_ROUTE_TO_HOSPITAL') updateData.en_route_hospital_at = new Date().toISOString();
+          if (status === 'EN_ROUTE_TO_HOSPITAL') {
+             updateData.en_route_hospital_at = new Date().toISOString();
+             if (destinationName) updateData.destination_name = destinationName;
+          }
+          if (status === 'AT_DESTINATION') updateData.at_destination_at = new Date().toISOString();
+          if (status === 'RETURNING_TO_BASE') updateData.returning_at = new Date().toISOString();
           
           await supabase.from('sos_events').update(updateData).eq('id', activeSOS.id);
         }
@@ -158,8 +179,27 @@ export const useStore = create<AppState>()(
                 completed_at: new Date().toISOString()
             }).eq('id', activeSOS.id);
         }
-        set({ activeSOS: null, driverStatus: 'STANDBY' });
+        set({ activeSOS: null, driverStatus: 'STANDBY', chatMessages: [] });
         get().setDriverStatus('STANDBY'); // sync
+      },
+      
+      sendChatMessage: async (message) => {
+         const { activeSOS, userProfile } = get();
+         if (!activeSOS || !activeSOS.id || !userProfile) return;
+         
+         await supabase.from('sos_messages').insert({
+            event_id: activeSOS.id,
+            sender_id: userProfile.id,
+            sender_name: userProfile.full_name,
+            message: message
+         });
+      },
+      
+      fetchChatMessages: async (eventId) => {
+         const { data } = await supabase.from('sos_messages').select('*').eq('event_id', eventId).order('created_at', { ascending: true });
+         if (data) {
+            set({ chatMessages: data });
+         }
       },
       
       setDriverStatus: async (status) => {
@@ -194,17 +234,34 @@ if (typeof window !== 'undefined') {
           emergencyType: data.emergency_type,
           locationMethod: data.location_method,
           driverName: data.driver_name,
-          targetedDriverId: data.targeted_driver_id
+          targetedDriverId: data.targeted_driver_id,
+          destinationName: data.destination_name
         };
         
         if (mappedSOS.status === 'COMPLETED') {
-           useStore.setState({ activeSOS: null, driverStatus: 'STANDBY' });
+           useStore.setState({ activeSOS: null, driverStatus: 'STANDBY', chatMessages: [] });
         } else {
            useStore.setState({ activeSOS: mappedSOS });
+           // If a new SOS started from nowhere and we didn't have chat, fetch chat
+           const { chatMessages } = useStore.getState();
+           if (chatMessages.length === 0) {
+               useStore.getState().fetchChatMessages(mappedSOS.id!);
+           }
         }
       } else if (payload.eventType === 'DELETE') {
-         useStore.setState({ activeSOS: null, driverStatus: 'STANDBY' });
+         useStore.setState({ activeSOS: null, driverStatus: 'STANDBY', chatMessages: [] });
       }
+    }).subscribe();
+
+  // Listen for Chat Messages Table
+  supabase.channel('public:sos_messages')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sos_messages' }, (payload) => {
+       const newMsg = payload.new as SOSMessage;
+       const { activeSOS, chatMessages } = useStore.getState();
+       
+       if (activeSOS && activeSOS.id === payload.new.event_id) {
+          useStore.setState({ chatMessages: [...chatMessages, newMsg] });
+       }
     }).subscribe();
 
   // Listen for PROFILES table to automatically update role if admin changes it

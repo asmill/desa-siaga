@@ -83,7 +83,7 @@ function MapCenterSync({ coords }: { coords: [number, number] }) {
 
 
 export default function Home() {
-  const { isVerified, userProfile, userCoords, activeSOS, triggerSOS, resetSOS, role } = useStore();
+  const { isVerified, userProfile, userCoords, activeSOS, triggerSOS, resetSOS, role, chatMessages, sendChatMessage } = useStore();
   const navigate = useNavigate();
   const [searchingProgress, setSearchingProgress] = useState(0);
   
@@ -100,9 +100,6 @@ export default function Home() {
   const [customLocation, setCustomLocation] = useState<[number, number]>(userCoords);
   const [showChat, setShowChat] = useState(false);
   const [sosLocation, setSosLocation] = useState<[number, number]>(userCoords);
-  const [chatMessages, setChatMessages] = useState<{sender: 'user' | 'driver', text: string, time: string}[]>([
-    { sender: 'driver', text: 'Halo, saya Supardi. Saya sedang menuju lokasi Anda. Mohon bersiap.', time: '16:10' }
-  ]);
   const [newMessage, setNewMessage] = useState('');
   const [ambCoords, setAmbCoords] = useState<[number, number]>([-6.621000, 107.771000]); 
   const [route, setRoute] = useState<[number, number][]>([]);
@@ -413,23 +410,27 @@ export default function Home() {
               </div>
             </div>
             <div style={{ flex: 1, padding: '16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {chatMessages.map((msg, i) => (
-                <div key={i} style={{ alignSelf: msg.sender === 'user' ? 'flex-end' : 'flex-start', maxWidth: '80%' }}>
+              {chatMessages.map((msg, i) => {
+                 const isMe = msg.sender_id === userProfile?.id;
+                 const timeStr = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                 return (
+                <div key={i} style={{ alignSelf: isMe ? 'flex-end' : 'flex-start', maxWidth: '80%' }}>
                   <div style={{ 
                     padding: '12px 16px', 
                     borderRadius: '16px', 
-                    backgroundColor: msg.sender === 'user' ? 'var(--primary-red)' : '#f1f5f9',
-                    color: msg.sender === 'user' ? 'white' : 'var(--text-main)',
-                    borderBottomRightRadius: msg.sender === 'user' ? '4px' : '16px',
-                    borderBottomLeftRadius: msg.sender === 'driver' ? '4px' : '16px',
+                    backgroundColor: isMe ? 'var(--primary-red)' : '#f1f5f9',
+                    color: isMe ? 'white' : 'var(--text-main)',
+                    borderBottomRightRadius: isMe ? '4px' : '16px',
+                    borderBottomLeftRadius: isMe ? '16px' : '4px',
                   }}>
-                    {msg.text}
+                    {msg.message}
                   </div>
-                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px', textAlign: msg.sender === 'user' ? 'right' : 'left' }}>
-                    {msg.time}
+                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px', textAlign: isMe ? 'right' : 'left' }}>
+                    {msg.sender_name} • {timeStr}
                   </div>
                 </div>
-              ))}
+                 );
+              })}
             </div>
             <div style={{ padding: '16px', borderTop: '1px solid var(--border-color)', display: 'flex', gap: '12px' }}>
               <input 
@@ -450,15 +451,8 @@ export default function Home() {
 
   function handleSendMessage() {
     if (!newMessage.trim()) return;
-    const now = new Date();
-    const timeStr = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
-    setChatMessages([...chatMessages, { sender: 'user', text: newMessage, time: timeStr }]);
+    sendChatMessage(newMessage);
     setNewMessage('');
-    
-    // Simulate Driver Reply
-    setTimeout(() => {
-      setChatMessages(prev => [...prev, { sender: 'driver', text: 'Baik Pak, segera meluncur.', time: timeStr }]);
-    }, 2000);
   }
 
   // --- MAIN HOME VIEW ---

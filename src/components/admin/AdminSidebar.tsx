@@ -8,7 +8,6 @@ interface AdminSidebarProps {
 }
 
 export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
-  const { setRole } = useStore();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -75,8 +74,8 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
         <div style={{ padding: '16px', borderTop: '1px solid var(--border-color)' }}>
           <button 
             onClick={() => {
-              setRole('Masyarakat');
-              navigate('/');
+              useStore.getState().setUserProfile(null);
+              navigate('/login');
             }}
             style={{
               display: 'flex',
@@ -85,16 +84,16 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
               padding: '12px 16px',
               width: '100%',
               borderRadius: '12px',
-              border: '1px solid var(--border-color)',
-              backgroundColor: '#f8fafc',
-              color: '#64748b',
+              border: '1px solid var(--primary-red)',
+              backgroundColor: '#fef2f2',
+              color: 'var(--primary-red)',
               cursor: 'pointer',
               fontSize: '13px',
-              fontWeight: 600
+              fontWeight: 700
             }}
           >
             <ChevronLeft size={16} />
-            Kembali ke Warga
+            Keluar (Logout)
           </button>
         </div>
       </div>

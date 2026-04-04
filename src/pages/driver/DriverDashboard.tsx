@@ -1,11 +1,22 @@
 import { useState, useEffect } from 'react';
-import { Ambulance, CheckCircle, Navigation, Phone, AlertCircle, CalendarClock, MapPin } from 'lucide-react';
+import { CheckCircle, Navigation, Phone, AlertCircle, CalendarClock, MapPin, Activity, MessageCircle, ChevronLeft } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { supabase } from '../../services/supabaseClient';
 
 export default function DriverDashboard() {
-  const { activeSOS, acceptSOS, updateSOSStatus, resetSOS, driverStatus, setDriverStatus, setUserCoords, userProfile } = useStore();
+  const { activeSOS, acceptSOS, updateSOSStatus, resetSOS, driverStatus, setDriverStatus, setUserCoords, userProfile, chatMessages, sendChatMessage } = useStore();
   const [bookings, setBookings] = useState<any[]>([]);
+  const [historyLog, setHistoryLog] = useState<any[]>([]);
+  const [selectedDestination, setSelectedDestination] = useState<string>("RSUD Terpadu Subang (3KM)");
+  const [showChat, setShowChat] = useState(false);
+  const [newMessage, setNewMessage] = useState('');
+
+  const dummyHospitals = [
+     "RSUD Terpadu Subang (3KM)",
+     "Klinik Bakti Medika (1KM)",
+     "Puskesmas Jalancagak (2KM)",
+     "RS PTPN VIII (6KM)"
+  ];
 
   // Fetch Peminjaman dari database (mocked for now inside DB if empty)
   useEffect(() => {
@@ -17,8 +28,20 @@ export default function DriverDashboard() {
         console.error(err);
       }
     };
+    
+    const fetchHistory = async () => {
+      try {
+         const { data } = await supabase.from('sos_events').select('*')
+           .not('completed_at', 'is', null)
+           .eq('driver_id', userProfile?.id)
+           .order('completed_at', { ascending: false }).limit(5);
+         if (data) setHistoryLog(data);
+      } catch (err) { console.error("Error fetching logs", err); }
+    };
+    
     fetchBookings();
-  }, []);
+    if(userProfile?.id) fetchHistory();
+  }, [userProfile?.id]);
 
   const handleUpdateGPS = () => {
      if (navigator.geolocation) {
@@ -57,17 +80,7 @@ export default function DriverDashboard() {
 
   return (
     <div style={{ padding: '24px', paddingBottom: '90px', display: 'flex', flexDirection: 'column', gap: '24px', backgroundColor: '#f8fafc', minHeight: '100vh' }}>
-      
-      {/* Header Info */}
-      <div className="card" style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 800 }}>Pusat Kendali Supir</h1>
-          <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#64748b' }}>Ambulans Desa Siaga</p>
-        </div>
-        <div style={{ padding: '12px', backgroundColor: '#eff6ff', borderRadius: '50%' }}>
-          <Ambulance size={28} color="#2563eb" />
-        </div>
-      </div>
+
 
       {/* SOS Alert Panel - Incoming SOS */}
       {activeSOS && activeSOS.status === 'PENDING' && (
@@ -111,31 +124,64 @@ export default function DriverDashboard() {
 
       {/* Active Mission Panel */}
       {activeSOS && activeSOS.status !== 'PENDING' && activeSOS.status !== 'COMPLETED' && activeSOS.status !== 'IDLE' && activeSOS.driverName === userProfile?.full_name && (
-        <div className="card" style={{ border: `2px solid ${activeSOS.status === 'EN_ROUTE_TO_HOSPITAL' ? '#3b82f6' : '#10b981'}`, backgroundColor: `${activeSOS.status === 'EN_ROUTE_TO_HOSPITAL' ? '#eff6ff' : '#ecfdf5'}`, padding: '20px' }}>
-          <h2 style={{ margin: '0 0 16px', fontSize: '16px', color: `${activeSOS.status === 'EN_ROUTE_TO_HOSPITAL' ? '#1d4ed8' : '#047857'}`, display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="card" style={{ border: `2px solid ${activeSOS.status === 'EN_ROUTE_TO_HOSPITAL' ? '#3b82f6' : activeSOS.status === 'RETURNING_TO_BASE' ? '#64748b' : '#10b981'}`, backgroundColor: `${activeSOS.status === 'EN_ROUTE_TO_HOSPITAL' ? '#eff6ff' : activeSOS.status === 'RETURNING_TO_BASE' ? '#f1f5f9' : '#ecfdf5'}`, padding: '20px' }}>
+          <h2 style={{ margin: '0 0 16px', fontSize: '16px', color: `${activeSOS.status === 'EN_ROUTE_TO_HOSPITAL' ? '#1d4ed8' : activeSOS.status === 'RETURNING_TO_BASE' ? '#334155' : '#047857'}`, display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Navigation size={18} /> 
             {activeSOS.status === 'ACCEPTED' ? 'MENGARAH KE TITIK DARURAT' : 
-             activeSOS.status === 'ARRIVED_AT_SCENE' ? 'TELAH TIBA DI LOKASI' : 'MENGANTAR MENUJU RUMAH SAKIT'}
+             activeSOS.status === 'ARRIVED_AT_SCENE' ? 'TELAH TIBA DI LOKASI TKP' : 
+             activeSOS.status === 'EN_ROUTE_TO_HOSPITAL' ? 'MENGANTAR MENUJU RUMAH SAKIT' :
+             activeSOS.status === 'AT_DESTINATION' ? 'TIBA DI RUMAH SAKIT' : 'PERJALANAN KEMBALI KE POS'}
           </h2>
           <div style={{ marginBottom: '20px', padding: '16px', backgroundColor: 'white', borderRadius: '12px' }}>
             <p style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: 700 }}>Pasien: {activeSOS.patientName}</p>
-            <p style={{ margin: '0 0 12px', fontSize: '13px', color: '#64748b' }}>Jenis: {activeSOS.emergencyType}</p>
+            <p style={{ margin: '0 0 12px', fontSize: '13px', color: '#64748b' }}>Jenis Darurat: {activeSOS.emergencyType}</p>
+            {activeSOS.destinationName && (
+               <p style={{ margin: '0 0 12px', fontSize: '13px', color: '#ca8a04', fontWeight: 600 }}>Tujuan: {activeSOS.destinationName}</p>
+            )}
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button style={{ flex: 1, padding: '10px', backgroundColor: '#eff6ff', color: '#2563eb', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 600, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px' }}><Phone size={14} /> Hubungi Warga</button>
+              <button onClick={() => setShowChat(true)} style={{ flex: 1, padding: '10px', backgroundColor: '#eff6ff', color: '#2563eb', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 600, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                <MessageCircle size={16} /> Buka Obrolan
+              </button>
+              <button style={{ flex: 1, padding: '10px', backgroundColor: '#f1f5f9', color: '#475569', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 600, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px' }}>
+                <Phone size={14} /> Telepon
+              </button>
             </div>
           </div>
           
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {activeSOS.status === 'ACCEPTED' && (
-              <button onClick={() => updateSOSStatus('ARRIVED_AT_SCENE')} style={{ width: '100%', padding: '14px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '12px', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}>Konfirmasi Tiba di TKP</button>
+              <button onClick={() => updateSOSStatus('ARRIVED_AT_SCENE')} style={{ width: '100%', padding: '14px', backgroundColor: '#10b981', color: 'white', border: 'none', borderRadius: '12px', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}>Konfirmasi Tiba di TKP (Pasien Naik)</button>
             )}
+            
             {activeSOS.status === 'ARRIVED_AT_SCENE' && (
-              <button onClick={() => updateSOSStatus('EN_ROUTE_TO_HOSPITAL')} style={{ width: '100%', padding: '14px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '12px', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}>Mengantar Ke Rumah Sakit</button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', backgroundColor: '#e2e8f0', padding: '16px', borderRadius: '12px' }}>
+                <p style={{ margin: 0, fontSize: '13px', fontWeight: 600 }}>Pilih Faskes Tujuan:</p>
+                <select 
+                  value={selectedDestination} 
+                  onChange={(e) => setSelectedDestination(e.target.value)}
+                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }}
+                >
+                  {dummyHospitals.map(faskes => <option key={faskes} value={faskes}>{faskes}</option>)}
+                </select>
+                <button onClick={() => updateSOSStatus('EN_ROUTE_TO_HOSPITAL', selectedDestination)} style={{ width: '100%', padding: '14px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '12px', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}>
+                  Berangkat Mengantar Ke Faskes Tujuan
+                </button>
+              </div>
             )}
+            
             {activeSOS.status === 'EN_ROUTE_TO_HOSPITAL' && (
-              <button onClick={() => resetSOS()} style={{ width: '100%', padding: '14px', backgroundColor: '#059669', color: 'white', border: 'none', borderRadius: '12px', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}>Tugas Selesai (Kembali Standby)</button>
+              <button onClick={() => updateSOSStatus('AT_DESTINATION')} style={{ width: '100%', padding: '14px', backgroundColor: '#8b5cf6', color: 'white', border: 'none', borderRadius: '12px', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}>Sampai Faskes Tujuan (Selesai Mengantar)</button>
             )}
-            <button onClick={resetSOS} style={{ width: '100%', padding: '14px', backgroundColor: 'transparent', color: '#ef4444', border: '1px solid #ef4444', borderRadius: '12px', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}>Batalkan Paksa Tugas</button>
+            
+            {activeSOS.status === 'AT_DESTINATION' && (
+              <button onClick={() => updateSOSStatus('RETURNING_TO_BASE')} style={{ width: '100%', padding: '14px', backgroundColor: '#f59e0b', color: 'white', border: 'none', borderRadius: '12px', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}>Kembali Ke Desa (Meninggalkan RS)</button>
+            )}
+
+            {activeSOS.status === 'RETURNING_TO_BASE' && (
+              <button onClick={() => resetSOS()} style={{ width: '100%', padding: '14px', backgroundColor: '#059669', color: 'white', border: 'none', borderRadius: '12px', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}>Tiba di Desa (Tugas Selesai / Standby)</button>
+            )}
+
+            <button onClick={resetSOS} style={{ width: '100%', padding: '14px', backgroundColor: 'transparent', color: '#ef4444', border: '1px solid #ef4444', borderRadius: '12px', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}>Batalkan Paksa Tugas Ini</button>
           </div>
         </div>
       )}
@@ -189,6 +235,118 @@ export default function DriverDashboard() {
           </div>
         )}
       </div>
+      {/* Tabel Laporan KPI Durasi Penanganan Darurat */}
+      <div className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+           <h3 style={{ margin: 0, fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}><Activity size={18} color="#059669" /> Laporan Penanganan Darurat</h3>
+        </div>
+        
+        <div style={{ overflowX: 'auto' }}>
+           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
+              <thead>
+                 <tr style={{ borderBottom: '2px solid #e2e8f0', color: '#64748b' }}>
+                    <th style={{ padding: '10px 4px' }}>Pasien (Jenis)</th>
+                    <th style={{ padding: '10px 4px' }}>Respon</th>
+                    <th style={{ padding: '10px 4px' }}>Ke TKP</th>
+                    <th style={{ padding: '10px 4px' }}>Ngantar RS</th>
+                    <th style={{ padding: '10px 4px' }}>Total Penuh</th>
+                 </tr>
+              </thead>
+              <tbody>
+                 {historyLog.length > 0 ? historyLog.map((log, idx) => {
+                    const tStart = log.created_at ? new Date(log.created_at).getTime() : 0;
+                    const tAccept = log.accepted_at ? new Date(log.accepted_at).getTime() : 0;
+                    const tArrive = log.arrived_at ? new Date(log.arrived_at).getTime() : 0;
+                    const tHospital = log.en_route_hospital_at ? new Date(log.en_route_hospital_at).getTime() : 0;
+                    const tDestination = log.at_destination_at ? new Date(log.at_destination_at).getTime() : 0;
+                    const tComplete = log.completed_at ? new Date(log.completed_at).getTime() : 0;
+
+                    const diffRespon = tAccept && tStart ? Math.ceil((tAccept - tStart)/60000) + 'm' : '-';
+                    const diffTKP = tArrive && tAccept ? Math.ceil((tArrive - tAccept)/60000) + 'm' : '-';
+                    const diffTrip = tDestination && tHospital ? Math.ceil((tDestination - tHospital)/60000) + 'm' : '-';
+                    const diffTotal = tComplete && tStart ? Math.ceil((tComplete - tStart)/60000) + 'm' : '-';
+
+                    return (
+                        <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                           <td style={{ padding: '12px 4px' }}><strong>{log.patient_name || '-'}</strong><br/><span style={{fontSize:'10px', color:'#94a3b8'}}>{log.emergency_type}</span></td>
+                           <td style={{ padding: '12px 4px' }}>{diffRespon}</td>
+                           <td style={{ padding: '12px 4px' }}>{diffTKP}</td>
+                           <td style={{ padding: '12px 4px' }}>{diffTrip}</td>
+                           <td style={{ padding: '12px 4px', color: '#059669', fontWeight: 700 }}>{diffTotal}</td>
+                        </tr>
+                    )
+                 }) : (
+                    <tr>
+                       <td colSpan={5} style={{ padding: '20px', textAlign: 'center', color: '#94a3b8' }}>Belum ada riwayat penyelesaian tugas.</td>
+                    </tr>
+                 )}
+              </tbody>
+           </table>
+        </div>
+      </div>
+      
+      {/* Chat Modal for Driver */}
+      {showChat && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'white', zIndex: 2000, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ padding: '16px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '16px', backgroundColor: '#2563eb', color: 'white' }}>
+            <button onClick={() => setShowChat(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'white', display: 'flex', alignItems: 'center' }}>
+              <ChevronLeft size={28} />
+            </button>
+            <div style={{ flex: 1 }}>
+              <h4 style={{ margin: 0, fontSize: '16px' }}>Saluran Khusus Warga</h4>
+              <p style={{ margin: 0, fontSize: '12px', opacity: 0.8 }}>Pasien: {activeSOS?.patientName}</p>
+            </div>
+          </div>
+          <div style={{ flex: 1, padding: '16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', backgroundColor: '#f8fafc' }}>
+            {chatMessages.map((msg, i) => {
+               const isMe = msg.sender_id === userProfile?.id;
+               const timeStr = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+               return (
+                <div key={i} style={{ alignSelf: isMe ? 'flex-end' : 'flex-start', maxWidth: '80%' }}>
+                  <div style={{ 
+                    padding: '12px 16px', 
+                    borderRadius: '16px', 
+                    backgroundColor: isMe ? '#2563eb' : '#e2e8f0',
+                    color: isMe ? 'white' : '#1e293b',
+                    borderBottomRightRadius: isMe ? '4px' : '16px',
+                    borderBottomLeftRadius: isMe ? '16px' : '4px',
+                  }}>
+                    {msg.message}
+                  </div>
+                  <div style={{ fontSize: '10px', color: '#64748b', marginTop: '4px', textAlign: isMe ? 'right' : 'left' }}>
+                    {msg.sender_name} • {timeStr}
+                  </div>
+                </div>
+               );
+            })}
+          </div>
+          <div style={{ padding: '16px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '12px', backgroundColor: 'white' }}>
+            <input 
+              type="text" 
+              style={{ flex: 1, padding: '12px 16px', borderRadius: '20px', border: '1px solid #cbd5e1', outline: 'none' }}
+              placeholder="Beritahu warga estimasi Anda..." 
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              onKeyPress={(e) => {
+                 if(e.key === 'Enter' && newMessage.trim()) {
+                    sendChatMessage(newMessage);
+                    setNewMessage('');
+                 }
+              }}
+            />
+            <button 
+              onClick={() => {
+                 if(newMessage.trim()){
+                    sendChatMessage(newMessage);
+                    setNewMessage('');
+                 }
+              }} 
+              style={{ padding: '0 20px', backgroundColor: '#2563eb', color: 'white', border: 'none', borderRadius: '20px', fontWeight: 600, cursor: 'pointer' }}>
+              Kirim
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   );
