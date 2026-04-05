@@ -530,9 +530,10 @@ export default function Home() {
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               {ambulancesList.map((item, index) => {
                 const getStatusColor = (st: string) => {
-                   if (st === 'ON DUTY' || st === 'ON_RESPONSE') return { bg: '#fef2f2', text: '#dc2626' };
+                   if (st.includes('On Response')) return { bg: '#fef2f2', text: '#dc2626' };
                    if (st === 'MAINTENANCE') return { bg: '#fef3c7', text: '#d97706' };
-                   return { bg: '#ecfdf5', text: '#059669' }; // AVAILABLE/STANDBY
+                   if (st === 'Stand By') return { bg: '#ecfdf5', text: '#059669' };
+                   return { bg: '#f1f5f9', text: '#64748b' }; // Idle
                 };
                 const colors = getStatusColor(item.status || 'MAINTENANCE');
                 return (

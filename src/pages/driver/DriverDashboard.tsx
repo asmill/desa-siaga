@@ -91,13 +91,13 @@ export default function DriverDashboard() {
      if (!selectedAmbulanceId) return showNotification('Silakan pilih ambulan terlebih dahulu', 'error');
      setLoadingShift(true);
      // Release existing ambulance if this driver used it (cleaning)
-     await supabase.from('ambulances').update({ driver_id: null, driver_name: null, status: 'AVAILABLE' }).eq('driver_id', userProfile?.id);
+     await supabase.from('ambulances').update({ driver_id: null, driver_name: null, status: 'Idle' }).eq('driver_id', userProfile?.id);
      
      // Bind driver to new ambulance
      const { error } = await supabase.from('ambulances').update({ 
        driver_id: userProfile?.id, 
        driver_name: userProfile?.full_name,
-       status: 'ON DUTY'
+       status: 'Stand By'
      }).eq('id', selectedAmbulanceId);
      
      setLoadingShift(false);
@@ -109,7 +109,7 @@ export default function DriverDashboard() {
 
   const handleEndShift = async () => {
      setLoadingShift(true);
-     await supabase.from('ambulances').update({ driver_id: null, driver_name: null, status: 'MAINTENANCE' }).eq('driver_id', userProfile?.id);
+     await supabase.from('ambulances').update({ driver_id: null, driver_name: null, status: 'Idle' }).eq('driver_id', userProfile?.id);
      setDriverStatus('OFFLINE');
      setLoadingShift(false);
      showNotification('Piket selesai. Silakan beristirahat.', 'success');

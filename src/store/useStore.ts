@@ -162,6 +162,7 @@ export const useStore = create<AppState>()(
           }).eq('id', activeSOS.id);
 
           if (!error) {
+            await supabase.from('ambulances').update({ status: 'On Response (Menuju TKP)' }).eq('driver_id', userProfile.id);
             set({ driverStatus: 'ON_RESPONSE' });
             get().setDriverStatus('ON_RESPONSE'); // To trigger DB sync
           }
@@ -171,13 +172,23 @@ export const useStore = create<AppState>()(
         const { activeSOS } = get();
         if (activeSOS && activeSOS.id) {
           const updateData: any = { status };
-          if (status === 'ARRIVED_AT_SCENE') updateData.arrived_at = new Date().toISOString();
+          if (status === 'ARRIVED_AT_SCENE') {
+             updateData.arrived_at = new Date().toISOString();
+             await supabase.from('ambulances').update({ status: 'On Response (Tiba di TKP)' }).eq('driver_id', activeSOS.targetedDriverId || get().userProfile?.id);
+          }
           if (status === 'EN_ROUTE_TO_HOSPITAL') {
              updateData.en_route_hospital_at = new Date().toISOString();
              if (destinationName) updateData.destination_name = destinationName;
+             await supabase.from('ambulances').update({ status: `On Response (Menuju ${destinationName})` }).eq('driver_id', activeSOS.targetedDriverId || get().userProfile?.id);
           }
-          if (status === 'AT_DESTINATION') updateData.at_destination_at = new Date().toISOString();
-          if (status === 'RETURNING_TO_BASE') updateData.returning_at = new Date().toISOString();
+          if (status === 'AT_DESTINATION') {
+             updateData.at_destination_at = new Date().toISOString();
+             await supabase.from('ambulances').update({ status: 'On Response (Tiba di Faskes)' }).eq('driver_id', activeSOS.targetedDriverId || get().userProfile?.id);
+          }
+          if (status === 'RETURNING_TO_BASE') {
+             updateData.returning_at = new Date().toISOString();
+             await supabase.from('ambulances').update({ status: 'On Response (Kembali ke Desa)' }).eq('driver_id', activeSOS.targetedDriverId || get().userProfile?.id);
+          }
           
           await supabase.from('sos_events').update(updateData).eq('id', activeSOS.id);
         }
@@ -190,6 +201,12 @@ export const useStore = create<AppState>()(
                 completed_at: new Date().toISOString()
             }).eq('id', activeSOS.id);
         }
+        
+        const { userProfile } = get();
+        if (userProfile?.id) {
+           await supabase.from('ambulances').update({ status: 'Stand By' }).eq('driver_id', userProfile.id);
+        }
+
         set({ activeSOS: null, driverStatus: 'STANDBY', chatMessages: [] });
         get().setDriverStatus('STANDBY'); // sync
       },
