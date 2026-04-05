@@ -240,3 +240,20 @@
     gap: 16px;
   }
 }
+
+/* Print Styles for PDF Export */
+@media print {
+  body {
+    background-color: white !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  .card, .admin-main, .home-content {
+    box-shadow: none !important;
+    border: none !important;
+  }
+}

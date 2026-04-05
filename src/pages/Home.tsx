@@ -119,7 +119,7 @@ export default function Home() {
           .eq('patient_id', userProfile.id)
           .eq('status', 'COMPLETED')
           .order('created_at', { ascending: false })
-          .limit(10);
+          .limit(20);
        if (histObj) setSosHistory(histObj);
 
        // 2. Fetch Ambulances Status
@@ -574,31 +574,53 @@ export default function Home() {
             <div style={{ padding: '24px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>Belum ada riwayat panggilan.</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              {sosHistory.map((item, index) => (
-                <div key={item.id} style={{ padding: '16px 20px', display: 'flex', gap: '16px', borderBottom: index < sosHistory.length - 1 ? '1px solid var(--border-color)' : 'none' }}>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                     <CheckCircle2 size={20} color="#059669" />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
-                      <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 700 }}>{item.emergency_type}</h4>
-                      <span style={{ fontSize: '10px', color: '#64748b' }}>
-                        {new Date(item.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
-                      </span>
+              <div className="print-only" style={{ padding: '20px', display: 'none' }}>
+                <h3>Laporan Riwayat Darurat {userProfile?.full_name}</h3>
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '16px' }}>
+                  <thead>
+                    <tr><th style={{ border: '1px solid #000', padding: '8px' }}>Jenis</th><th style={{ border: '1px solid #000', padding: '8px' }}>Tanggal</th><th style={{ border: '1px solid #000', padding: '8px' }}>Supir</th></tr>
+                  </thead>
+                  <tbody>
+                    {sosHistory.map(item => (
+                      <tr key={item.id}><td style={{ border: '1px solid #000', padding: '8px' }}>{item.emergency_type}</td><td style={{ border: '1px solid #000', padding: '8px' }}>{new Date(item.created_at).toLocaleDateString('id-ID')}</td><td style={{ border: '1px solid #000', padding: '8px' }}>{item.driver_name}</td></tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="no-print">
+                {sosHistory.slice(0, 4).map((item, index) => (
+                  <div key={item.id} style={{ padding: '16px 20px', display: 'flex', gap: '16px', borderBottom: index < Math.min(sosHistory.length, 4) - 1 ? '1px solid var(--border-color)' : 'none' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                       <CheckCircle2 size={20} color="#059669" />
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-muted)' }}>
-                        <User size={12} /> Supir Penolong: {item.driver_name || 'Tidak ada'}
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
+                        <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 700 }}>{item.emergency_type}</h4>
+                        <span style={{ fontSize: '10px', color: '#64748b' }}>
+                          {new Date(item.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                        </span>
                       </div>
-                      {item.completed_at && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-muted)' }}>
-                          <PhoneCall size={12} /> Waktu Selesai: {new Date(item.completed_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                          <User size={12} /> Supir Penolong: {item.driver_name || 'Tidak ada'}
                         </div>
-                      )}
+                        {item.completed_at && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                            <PhoneCall size={12} /> Waktu Selesai: {new Date(item.completed_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+                {sosHistory.length > 0 && (
+                  <div style={{ padding: '16px', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'center' }}>
+                     <button onClick={() => window.print()} className="btn" style={{ padding: '10px 20px', borderRadius: '12px', backgroundColor: '#f1f5f9', color: '#334155', fontWeight: 600, fontSize: '13px' }}>
+                       Lihat Semua Riwayat (Download PDF)
+                     </button>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
