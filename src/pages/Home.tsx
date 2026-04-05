@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { renderToString } from 'react-dom/server';
-import { PhoneCall, User, CheckCircle2, AlertTriangle, Activity, ChevronLeft, Ambulance, MapPin, MessageCircle, Siren, Loader2, HeartPulse, Car, Baby, Plus, Map as MapIcon, LocateFixed } from 'lucide-react';
+import { PhoneCall, User, CheckCircle2, AlertTriangle, Activity, ChevronLeft, Ambulance, MessageCircle, Siren, Loader2, HeartPulse, Car, Baby, Plus, Map as MapIcon, LocateFixed } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { useStore } from '../store/useStore';
