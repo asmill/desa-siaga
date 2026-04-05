@@ -10,8 +10,6 @@ export default function DriverDashboard() {
   const [selectedDestination, setSelectedDestination] = useState<string>("RSUD Terpadu Subang (3KM)");
   const [showChat, setShowChat] = useState(false);
   const [newMessage, setNewMessage] = useState('');
-  const [ambulancesList, setAmbulancesList] = useState<any[]>([]);
-  const [selectedAmbulanceId, setSelectedAmbulanceId] = useState<string>('');
   const [loadingShift, setLoadingShift] = useState(false);
 
   const dummyHospitals = [
@@ -42,13 +40,7 @@ export default function DriverDashboard() {
       } catch (err) { console.error("Error fetching logs", err); }
     };
     
-    const fetchAmbulances = async () => {
-       const { data } = await supabase.from('ambulances').select('*').order('id', { ascending: true });
-       if (data) setAmbulancesList(data);
-    };
-    
     fetchBookings();
-    fetchAmbulances();
     if(userProfile?.id) fetchHistory();
   }, [userProfile?.id]);
 
@@ -88,31 +80,25 @@ export default function DriverDashboard() {
   };
 
   const handleStartShift = async () => {
-     if (!selectedAmbulanceId) return showNotification('Silakan pilih ambulan terlebih dahulu', 'error');
      setLoadingShift(true);
-     // Release existing ambulance if this driver used it (cleaning)
-     await supabase.from('ambulances').update({ driver_id: null, driver_name: null, status: 'Idle' }).eq('driver_id', userProfile?.id);
-     
-     // Bind driver to new ambulance
+     // Update just the status of the ambulance currently bound to this driver in Profile
      const { error } = await supabase.from('ambulances').update({ 
-       driver_id: userProfile?.id, 
-       driver_name: userProfile?.full_name,
        status: 'Stand By'
-     }).eq('id', selectedAmbulanceId);
+     }).eq('driver_id', userProfile?.id);
      
      setLoadingShift(false);
-     if (error) return showNotification('Gagal mengunci unit. Coba lagi.', 'error');
+     if (error) return showNotification('Gagal menghubungi unit.', 'error');
      
      setDriverStatus('STANDBY');
-     showNotification('Shift Domisili dimulai. Anda kini siaga!', 'success');
+     showNotification('Anda bersatus AKTIF (Online). Anda kini siaga!', 'success');
   };
 
   const handleEndShift = async () => {
      setLoadingShift(true);
-     await supabase.from('ambulances').update({ driver_id: null, driver_name: null, status: 'Idle' }).eq('driver_id', userProfile?.id);
+     await supabase.from('ambulances').update({ status: 'Idle' }).eq('driver_id', userProfile?.id);
      setDriverStatus('OFFLINE');
      setLoadingShift(false);
-     showNotification('Piket selesai. Silakan beristirahat.', 'success');
+     showNotification('Anda telah NONAKTIF (Offline). Silakan beristirahat.', 'success');
   };
 
   return (
@@ -238,41 +224,35 @@ export default function DriverDashboard() {
 
       {/* Status Selector & Shift Panel */}
       <div className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        <h3 style={{ margin: 0, fontSize: '15px', color: '#334155' }}>Sistem Piket (Shift)</h3>
+        <h3 style={{ margin: 0, fontSize: '15px', color: '#334155' }}>Status Kesiapan Supir (Operasional Kendaraan)</h3>
         
         {driverStatus === 'OFFLINE' ? (
-           <div style={{ backgroundColor: '#f1f5f9', padding: '16px', borderRadius: '12px' }}>
-             <p style={{ margin: '0 0 12px', fontSize: '13px', color: '#475569' }}>Ambil kendali unit ambulans untuk mulai dinas.</p>
-             <select 
-               value={selectedAmbulanceId} 
-               onChange={(e) => setSelectedAmbulanceId(e.target.value)}
-               className="input-base"
-               style={{ width: '100%', marginBottom: '12px' }}
-             >
-               <option value="">-- Pilih Kendaraan Menganggur --</option>
-               {ambulancesList.filter(a => !a.driver_id).map(amb => (
-                 <option key={amb.id} value={amb.id}>{amb.plate_number} - {amb.model}</option>
-               ))}
-             </select>
+           <div style={{ backgroundColor: '#f1f5f9', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+             <p style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: 700, color: '#475569' }}>Anda Sedang OFFLINE</p>
+             <p style={{ margin: '0 0 12px', fontSize: '12px', color: '#64748b' }}>Sistem SOS tidak akan masuk. Mobil Anda berstatus "Idle" hari ini.</p>
              <button disabled={loadingShift} onClick={handleStartShift} className="btn btn-primary" style={{ width: '100%', padding: '14px', borderRadius: '12px' }}>
-                Mulai Piket Hari Ini
+                Go ONLINE (Mulai Berjaga)
              </button>
            </div>
         ) : (
            <div style={{ backgroundColor: '#ecfdf5', padding: '16px', borderRadius: '12px', border: '1px solid #10b981' }}>
-             <p style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: 700, color: '#047857' }}>Anda Sedang Bertugas</p>
-             <p style={{ margin: '0 0 12px', fontSize: '12px', color: '#065f46' }}>Tekan Selesai Piket untuk melepas unit ke pool agar supir lain bisa giliran.</p>
+             <p style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: 700, color: '#047857' }}>Anda Sedang Bertugas (ONLINE)</p>
+             <p style={{ margin: '0 0 12px', fontSize: '12px', color: '#065f46' }}>Tekan Go Offline untuk mematikan notifikasi SOS. Kendaraan Anda otomatis kembali "Idle".</p>
              <button disabled={loadingShift} onClick={handleEndShift} className="btn" style={{ width: '100%', padding: '14px', backgroundColor: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '12px', fontWeight: 700 }}>
-                Selesai Piket (Kembalikan Kunci)
+                Go OFFLINE (Istirahat / Selesai)
              </button>
            </div>
         )}
 
-        <h3 style={{ margin: '16px 0 0', fontSize: '13px', color: '#64748b' }}>Override Status Darurat:</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-          {renderStatusButton('Stand By', 'STANDBY', '#10b981', '#ecfdf5')}
-          {renderStatusButton('On Duty (Repot)', 'ON_DUTY', '#64748b', '#f1f5f9')}
-        </div>
+        {driverStatus !== 'OFFLINE' && (
+          <>
+            <h3 style={{ margin: '16px 0 0', fontSize: '13px', color: '#64748b' }}>Override Kondisi Darurat Manual:</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              {renderStatusButton('Stand By', 'STANDBY', '#10b981', '#ecfdf5')}
+              {renderStatusButton('On Duty (Sibuk Luar)', 'ON_DUTY', '#64748b', '#f1f5f9')}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Tabel Jadwal Booking Ambulan */}
