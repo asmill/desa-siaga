@@ -4,6 +4,7 @@ import { PhoneCall, User, CheckCircle2, AlertTriangle, Activity, ChevronLeft, Am
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { useStore } from '../store/useStore';
+import { supabase } from '../services/supabaseClient';
 import '../App.css';
 
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -105,10 +106,38 @@ export default function Home() {
   const [route, setRoute] = useState<[number, number][]>([]);
   const [eta, setEta] = useState(15);
   
-  const mockDashboard = [
-    { id: 1, type: 'DARURAT', patient: 'Bpk. Ahmad (RT 02)', driver: 'Supardi', dest: 'RSUD Subang', status: 'Sedang Beroperasi' },
-    { id: 2, type: 'REGULER', patient: 'Ibu Siti (RT 05)', driver: 'Ujang', dest: 'Klinik Cahaya', status: 'Selesai' }
-  ];
+  const [sosHistory, setSosHistory] = useState<any[]>([]);
+  const [ambulancesList, setAmbulancesList] = useState<any[]>([]);
+
+  // Fetch tables
+  useEffect(() => {
+    if (!userProfile) return;
+    const fetchHomeData = async () => {
+       // 1. Fetch SOS History
+       const { data: histObj } = await supabase.from('sos_events')
+          .select('*')
+          .eq('patient_id', userProfile.id)
+          .eq('status', 'COMPLETED')
+          .order('created_at', { ascending: false })
+          .limit(10);
+       if (histObj) setSosHistory(histObj);
+
+       // 2. Fetch Ambulances Status
+       const { data: ambObj } = await supabase.from('ambulances')
+          .select('*')
+          .order('id', { ascending: true });
+       if (ambObj) setAmbulancesList(ambObj);
+    };
+    fetchHomeData();
+    
+    // Subscribe to ambulance updates to keep it realtime
+    const sub = supabase.channel('public:ambulances')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ambulances' }, () => {
+         fetchHomeData();
+      }).subscribe();
+      
+    return () => { supabase.removeChannel(sub); };
+  }, [userProfile]);
 
   // Derived status from global store
   const status = activeSOS?.status || 'IDLE';
@@ -483,39 +512,95 @@ export default function Home() {
       </div>
 
       {/* Dashboard Area */}
-      <div style={{ backgroundColor: 'white', border: '1px solid var(--border-color)', borderRadius: '16px', overflow: 'hidden' }}>
-        <div style={{ padding: '16px 20px', backgroundColor: '#f8fafc', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h2 style={{ fontSize: '15px', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)' }}>
-            <Activity size={18} color="var(--primary-red)" />
-            Aktivitas Ambulans Hari Ini
-          </h2>
-          <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', backgroundColor: 'white', padding: '4px 8px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>{mockDashboard.length} Rute</span>
-        </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
         
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          {mockDashboard.map((item, index) => (
-            <div key={item.id} style={{ padding: '16px 20px', display: 'flex', gap: '16px', borderBottom: index < mockDashboard.length - 1 ? '1px solid var(--border-color)' : 'none' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: item.status === 'Sedang Beroperasi' ? '#fef2f2' : '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Ambulance size={20} color={item.status === 'Sedang Beroperasi' ? '#dc2626' : '#059669'} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
-                  <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 700 }}>{item.patient}</h4>
-                  <span style={{ fontSize: '10px', fontWeight: 700, color: item.status === 'Sedang Beroperasi' ? '#dc2626' : '#059669', textTransform: 'uppercase' }}>
-                    {item.status}
-                  </span>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-muted)' }}>
-                    <MapPin size={12} /> {item.dest}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-muted)' }}>
-                    <User size={12} /> Supir: {item.driver}
-                  </div>
-                </div>
-              </div>
+        {/* TABEL AMBULAN DESA */}
+        <div style={{ backgroundColor: 'white', border: '1px solid var(--border-color)', borderRadius: '16px', overflow: 'hidden' }}>
+          <div style={{ padding: '16px 20px', backgroundColor: '#f8fafc', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h2 style={{ fontSize: '15px', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)' }}>
+              <Ambulance size={18} color="var(--primary-red)" />
+              Monitor Ambulan Desa
+            </h2>
+            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', backgroundColor: 'white', padding: '4px 8px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>{ambulancesList.length} Unit Total</span>
+          </div>
+          
+          {ambulancesList.length === 0 ? (
+            <div style={{ padding: '24px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>Belum ada armada ambulan.</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {ambulancesList.map((item, index) => {
+                const getStatusColor = (st: string) => {
+                   if (st === 'ON DUTY' || st === 'ON_RESPONSE') return { bg: '#fef2f2', text: '#dc2626' };
+                   if (st === 'MAINTENANCE') return { bg: '#fef3c7', text: '#d97706' };
+                   return { bg: '#ecfdf5', text: '#059669' }; // AVAILABLE/STANDBY
+                };
+                const colors = getStatusColor(item.status || 'MAINTENANCE');
+                return (
+                 <div key={item.id} style={{ padding: '16px 20px', display: 'flex', gap: '16px', borderBottom: index < ambulancesList.length - 1 ? '1px solid var(--border-color)' : 'none' }}>
+                   <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: colors.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                     <Ambulance size={20} color={colors.text} />
+                   </div>
+                   <div style={{ flex: 1 }}>
+                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
+                       <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 700 }}>{item.plate_number}</h4>
+                       <span style={{ fontSize: '10px', fontWeight: 800, color: colors.text, backgroundColor: colors.bg, padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase' }}>
+                         {item.status || 'MAINTENANCE'}
+                       </span>
+                     </div>
+                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                       <div style={{ fontSize: '12px', color: 'var(--text-main)' }}>{item.model}</div>
+                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                         <User size={12} /> Supir Aktif: {item.driver_name ? item.driver_name : <span style={{ fontStyle: 'italic', color: '#94a3b8' }}>Kosong</span>}
+                       </div>
+                     </div>
+                   </div>
+                 </div>
+                );
+              })}
             </div>
-          ))}
+          )}
+        </div>
+
+        {/* TABEL RIWAYAT DARURAT */}
+        <div style={{ backgroundColor: 'white', border: '1px solid var(--border-color)', borderRadius: '16px', overflow: 'hidden' }}>
+          <div style={{ padding: '16px 20px', backgroundColor: '#f8fafc', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h2 style={{ fontSize: '15px', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)' }}>
+              <Activity size={18} color="#2563eb" />
+              Riwayat Darurat Anda
+            </h2>
+          </div>
+          
+          {sosHistory.length === 0 ? (
+            <div style={{ padding: '24px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>Belum ada riwayat panggilan.</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {sosHistory.map((item, index) => (
+                <div key={item.id} style={{ padding: '16px 20px', display: 'flex', gap: '16px', borderBottom: index < sosHistory.length - 1 ? '1px solid var(--border-color)' : 'none' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                     <CheckCircle2 size={20} color="#059669" />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
+                      <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 700 }}>{item.emergency_type}</h4>
+                      <span style={{ fontSize: '10px', color: '#64748b' }}>
+                        {new Date(item.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                        <User size={12} /> Supir Penolong: {item.driver_name || 'Tidak ada'}
+                      </div>
+                      {item.completed_at && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                          <PhoneCall size={12} /> Waktu Selesai: {new Date(item.completed_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

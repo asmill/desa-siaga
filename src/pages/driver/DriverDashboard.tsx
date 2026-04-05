@@ -10,6 +10,9 @@ export default function DriverDashboard() {
   const [selectedDestination, setSelectedDestination] = useState<string>("RSUD Terpadu Subang (3KM)");
   const [showChat, setShowChat] = useState(false);
   const [newMessage, setNewMessage] = useState('');
+  const [ambulancesList, setAmbulancesList] = useState<any[]>([]);
+  const [selectedAmbulanceId, setSelectedAmbulanceId] = useState<string>('');
+  const [loadingShift, setLoadingShift] = useState(false);
 
   const dummyHospitals = [
      "RSUD Terpadu Subang (3KM)",
@@ -39,7 +42,13 @@ export default function DriverDashboard() {
       } catch (err) { console.error("Error fetching logs", err); }
     };
     
+    const fetchAmbulances = async () => {
+       const { data } = await supabase.from('ambulances').select('*').order('id', { ascending: true });
+       if (data) setAmbulancesList(data);
+    };
+    
     fetchBookings();
+    fetchAmbulances();
     if(userProfile?.id) fetchHistory();
   }, [userProfile?.id]);
 
@@ -78,14 +87,43 @@ export default function DriverDashboard() {
     );
   };
 
+  const handleStartShift = async () => {
+     if (!selectedAmbulanceId) return showNotification('Silakan pilih ambulan terlebih dahulu', 'error');
+     setLoadingShift(true);
+     // Release existing ambulance if this driver used it (cleaning)
+     await supabase.from('ambulances').update({ driver_id: null, driver_name: null, status: 'AVAILABLE' }).eq('driver_id', userProfile?.id);
+     
+     // Bind driver to new ambulance
+     const { error } = await supabase.from('ambulances').update({ 
+       driver_id: userProfile?.id, 
+       driver_name: userProfile?.full_name,
+       status: 'ON DUTY'
+     }).eq('id', selectedAmbulanceId);
+     
+     setLoadingShift(false);
+     if (error) return showNotification('Gagal mengunci unit. Coba lagi.', 'error');
+     
+     setDriverStatus('STANDBY');
+     showNotification('Shift Domisili dimulai. Anda kini siaga!', 'success');
+  };
+
+  const handleEndShift = async () => {
+     setLoadingShift(true);
+     await supabase.from('ambulances').update({ driver_id: null, driver_name: null, status: 'MAINTENANCE' }).eq('driver_id', userProfile?.id);
+     setDriverStatus('OFFLINE');
+     setLoadingShift(false);
+     showNotification('Piket selesai. Silakan beristirahat.', 'success');
+  };
+
   return (
     <div style={{ padding: '24px', paddingBottom: '90px', display: 'flex', flexDirection: 'column', gap: '24px', backgroundColor: '#f8fafc', minHeight: '100vh' }}>
 
 
       {/* SOS Alert Panel - Incoming SOS */}
-      {activeSOS && activeSOS.status === 'PENDING' && (
+      {activeSOS && activeSOS.status === 'PENDING' && driverStatus === 'STANDBY' && (
         <div className="card" style={{ border: '2px solid #ef4444', backgroundColor: '#fef2f2', padding: '20px' }}>
-          <audio src="https://assets.mixkit.co/active_storage/sfx/1041/1041-preview.mp3" autoPlay loop style={{ display: 'none' }} />
+          {/* File suara sirine dipanggil dari folder public/sirine-sos.mp3 */}
+          <audio src="/sirine-sos.mp3" autoPlay loop style={{ display: 'none' }} />
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
             <div style={{ width: '16px', height: '16px', borderRadius: '50%', backgroundColor: '#ef4444', animation: 'pulse 1s infinite' }}></div>
             <h2 style={{ margin: 0, fontSize: '18px', color: '#ef4444', fontWeight: 800 }}>PANGGILAN DARURAT MASUK!</h2>
@@ -198,14 +236,42 @@ export default function DriverDashboard() {
         </button>
       </div>
 
-      {/* Status Selector */}
-      <div>
-        <h3 style={{ margin: '0 0 16px', fontSize: '15px', color: '#334155' }}>Update Status Kendaraan</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+      {/* Status Selector & Shift Panel */}
+      <div className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <h3 style={{ margin: 0, fontSize: '15px', color: '#334155' }}>Sistem Piket (Shift)</h3>
+        
+        {driverStatus === 'OFFLINE' ? (
+           <div style={{ backgroundColor: '#f1f5f9', padding: '16px', borderRadius: '12px' }}>
+             <p style={{ margin: '0 0 12px', fontSize: '13px', color: '#475569' }}>Ambil kendali unit ambulans untuk mulai dinas.</p>
+             <select 
+               value={selectedAmbulanceId} 
+               onChange={(e) => setSelectedAmbulanceId(e.target.value)}
+               className="input-base"
+               style={{ width: '100%', marginBottom: '12px' }}
+             >
+               <option value="">-- Pilih Kendaraan Menganggur --</option>
+               {ambulancesList.filter(a => !a.driver_id).map(amb => (
+                 <option key={amb.id} value={amb.id}>{amb.plate_number} - {amb.model}</option>
+               ))}
+             </select>
+             <button disabled={loadingShift} onClick={handleStartShift} className="btn btn-primary" style={{ width: '100%', padding: '14px', borderRadius: '12px' }}>
+                Mulai Piket Hari Ini
+             </button>
+           </div>
+        ) : (
+           <div style={{ backgroundColor: '#ecfdf5', padding: '16px', borderRadius: '12px', border: '1px solid #10b981' }}>
+             <p style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: 700, color: '#047857' }}>Anda Sedang Bertugas</p>
+             <p style={{ margin: '0 0 12px', fontSize: '12px', color: '#065f46' }}>Tekan Selesai Piket untuk melepas unit ke pool agar supir lain bisa giliran.</p>
+             <button disabled={loadingShift} onClick={handleEndShift} className="btn" style={{ width: '100%', padding: '14px', backgroundColor: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: '12px', fontWeight: 700 }}>
+                Selesai Piket (Kembalikan Kunci)
+             </button>
+           </div>
+        )}
+
+        <h3 style={{ margin: '16px 0 0', fontSize: '13px', color: '#64748b' }}>Override Status Darurat:</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           {renderStatusButton('Stand By', 'STANDBY', '#10b981', '#ecfdf5')}
-          {renderStatusButton('Offline', 'OFFLINE', '#64748b', '#f1f5f9')}
-          {renderStatusButton('On Response', 'ON_RESPONSE', '#f59e0b', '#fffbeb')}
-          {renderStatusButton('On Duty', 'ON_DUTY', '#3b82f6', '#eff6ff')}
+          {renderStatusButton('On Duty (Repot)', 'ON_DUTY', '#64748b', '#f1f5f9')}
         </div>
       </div>
 
