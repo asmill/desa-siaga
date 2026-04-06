@@ -54,6 +54,8 @@ interface AppState {
   activeSOS: ActiveSOS | null;
   driverStatus: DriverStatusType;
   chatMessages: SOSMessage[];
+  chatHistory: { [sosId: string]: SOSMessage[] };  // riwayat chat per SOS
+  unreadChatCount: number;                          // badge chat belum dibaca
   notification: { show: boolean, message: string, type: 'success' | 'error' | 'info' } | null;
   
   setUserProfile: (profile: UserProfile | null) => void;
@@ -71,6 +73,7 @@ interface AppState {
   // Chat Actions
   sendChatMessage: (message: string) => void;
   fetchChatMessages: (eventId: string) => void;
+  resetUnreadChat: () => void;
   
   // Driver Actions
   setDriverStatus: (status: DriverStatusType) => void;
@@ -87,6 +90,8 @@ export const useStore = create<AppState>()(
       activeSOS: null,
       driverStatus: 'STANDBY',
       chatMessages: [],
+      chatHistory: {},
+      unreadChatCount: 0,
       notification: null,
 
       setUserProfile: (profile) => set({ userProfile: profile }),
@@ -218,12 +223,16 @@ export const useStore = create<AppState>()(
         }
       },
       resetSOS: async () => {
-        const { activeSOS } = get();
+        const { activeSOS, chatMessages, chatHistory } = get();
         if (activeSOS && activeSOS.id) {
             await supabase.from('sos_events').update({ 
                 status: 'COMPLETED',
                 completed_at: new Date().toISOString()
             }).eq('id', activeSOS.id);
+            
+            // Simpan riwayat chat sebelum dihapus
+            const updatedHistory = { ...chatHistory, [activeSOS.id]: chatMessages };
+            set({ chatHistory: updatedHistory });
         }
         
         const { userProfile } = get();
@@ -253,6 +262,8 @@ export const useStore = create<AppState>()(
             set({ chatMessages: data });
          }
       },
+      
+      resetUnreadChat: () => set({ unreadChatCount: 0 }),
       
       setDriverStatus: async (status) => {
          set({ driverStatus: status });
@@ -349,12 +360,13 @@ if (typeof window !== 'undefined') {
   supabase.channel('public:sos_messages')
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sos_messages' }, (payload) => {
        const newMsg = payload.new as SOSMessage;
-       const { activeSOS, chatMessages, userProfile } = useStore.getState();
+       const { activeSOS, chatMessages, userProfile, unreadChatCount } = useStore.getState();
        
        if (activeSOS && activeSOS.id === payload.new.event_id) {
           useStore.setState({ chatMessages: [...chatMessages, newMsg] });
-          // Show browser notification for incoming chat from OTHER party
+          // Chat dari pihak lain: naikkan badge dan munculkan notifikasi
           if (newMsg.sender_id !== userProfile?.id) {
+            useStore.setState({ unreadChatCount: unreadChatCount + 1 });
             showBrowserNotif(
               `💬 Pesan dari ${newMsg.sender_name || 'Tim Darurat'}`,
               newMsg.message || 'Pesan baru diterima'

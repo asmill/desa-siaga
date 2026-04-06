@@ -20,14 +20,18 @@ self.addEventListener('message', (event) => {
 // Klik notifikasi: buka/fokus tab aplikasi
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+  const targetUrl = self.registration.scope; // URL root aplikasi
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // Cari tab yang sudah ada dan fokus
       for (const client of clientList) {
-        if (client.url.includes(self.location.origin) && 'focus' in client) {
-          return client.focus();
+        if ('focus' in client) {
+          client.focus();
+          return;
         }
       }
-      if (clients.openWindow) return clients.openWindow('/');
+      // Tidak ada tab → buka baru
+      if (clients.openWindow) return clients.openWindow(targetUrl);
     })
   );
 });
