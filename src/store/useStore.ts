@@ -275,10 +275,29 @@ function requestNotifPermission() {
   }
 }
 
-function showBrowserNotif(title: string, body: string, icon = '/favicon.ico') {
-  if ('Notification' in window && Notification.permission === 'granted') {
-    new Notification(title, { body, icon });
-  }
+// Gunakan Service Worker agar notifikasi muncul bahkan di latar belakang
+async function showBrowserNotif(title: string, body: string, icon = '/favicon.ico') {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  
+  try {
+    // Coba pakai Service Worker (muncul di latar belakang)
+    if ('serviceWorker' in navigator) {
+      const registration = await navigator.serviceWorker.getRegistration('/OneSignalSDKWorker.js');
+      if (registration) {
+        await registration.showNotification(title, {
+          body,
+          icon,
+          badge: icon,
+          requireInteraction: true,
+          tag: 'desasiaga-notif'
+        } as NotificationOptions);
+        return;
+      }
+    }
+  } catch (_) { /* fallback */ }
+  
+  // Fallback: langsung (hanya muncul jika tab aktif)
+  new Notification(title, { body, icon });
 }
 
 // Subscribe to Supabase Postgres Changes
