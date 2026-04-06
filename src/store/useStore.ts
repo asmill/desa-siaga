@@ -107,28 +107,33 @@ export const useStore = create<AppState>()(
         const { userProfile } = get();
         if (!userProfile) return;
 
-        let targetedDriverId = null;
+        let targetedDriverId: string | null = null;
+        let standbyDriverIds: string[] = [];
         
-        // Find closest standby driver
+        // Find closest standby driver from Active Ambulances
         try {
-          const { data: drivers } = await supabase.from('profiles').select('*')
-              .eq('role', 'Supir')
-              .eq('driver_status', 'STANDBY');
-          
-          if (drivers && drivers.length > 0) {
-             let minDistance = Infinity;
-             for (const d of drivers) {
-                if (d.lat && d.lng) {
-                   const dist = getDistance(coords[0], coords[1], d.lat, d.lng);
-                   if (dist < minDistance) {
-                      minDistance = dist;
-                      targetedDriverId = d.id;
-                   }
-                }
-             }
-          }
+           const { data: activeAmbs } = await supabase.from('ambulances').select('driver_id').eq('status', 'Stand By').not('driver_id', 'is', null);
+           
+           if (activeAmbs && activeAmbs.length > 0) {
+              standbyDriverIds = activeAmbs.map((a: any) => a.driver_id);
+              
+              const { data: drivers } = await supabase.from('profiles').select('*').in('id', standbyDriverIds);
+              if (drivers && drivers.length > 0) {
+                 let minDistance = Infinity;
+                 for (const d of drivers) {
+                    if (d.lat && d.lng) {
+                       const dist = getDistance(coords[0], coords[1], d.lat, d.lng);
+                       if (dist < minDistance) {
+                          minDistance = dist;
+                          targetedDriverId = d.id;
+                       }
+                    }
+                 }
+                 if (!targetedDriverId) targetedDriverId = drivers[0].id;
+              }
+           }
         } catch(e) {
-          console.error("Failed to find closest driver", e);
+           console.error("Failed to find closest driver", e);
         }
 
         // Insert into Supabase
@@ -148,16 +153,16 @@ export const useStore = create<AppState>()(
           return;
         }
 
-        const activeSOS = { id: data.id, patientName: name, patientCoords: coords as [number, number], status: 'PENDING' as SOSStatus, emergencyType, locationMethod, targetedDriverId };
+        const activeSOS = { id: data.id, patientName: name, patientCoords: coords as [number, number], status: 'PENDING' as SOSStatus, emergencyType, locationMethod, targetedDriverId: targetedDriverId || undefined };
         set({ activeSOS });
 
         // --- Eksekusi Push Notification OneSignal via REST API ---
         try {
            const restKey = import.meta.env.VITE_ONESIGNAL_REST_KEY;
-           if (restKey && targetedDriverId) {
+           if (restKey && standbyDriverIds.length > 0) {
              const payload = {
                 app_id: "f48de674-ea17-4e38-b10f-a2808fcae5f8",
-                include_aliases: { external_id: [targetedDriverId] },
+                include_aliases: { external_id: standbyDriverIds },
                 target_channel: "push",
                 contents: { en: `Darurat Medis: ${emergencyType}! Segera buka aplikasi.` },
                 headings: { en: "🚨 PANGGILAN SOS MASUK! 🚨" }
