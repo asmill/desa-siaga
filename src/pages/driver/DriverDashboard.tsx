@@ -93,12 +93,11 @@ export default function DriverDashboard() {
      setLoadingShift(true);
 
      // Release any old ambulance to be sure
-     await supabase.from('ambulances').update({ driver_id: null, driver_name: null, status: 'Idle' }).eq('driver_id', userProfile?.id);
+     await supabase.from('ambulances').update({ driver_id: null, status: 'Idle' }).eq('driver_id', userProfile?.id);
      
      // Bind driver to new ambulance and set Stand By
      const { error } = await supabase.from('ambulances').update({ 
        driver_id: userProfile?.id,
-       driver_name: userProfile?.full_name,
        status: 'Stand By'
      }).eq('id', selectedAmbulanceId);
      
@@ -118,7 +117,7 @@ export default function DriverDashboard() {
 
   const handleEndShift = async () => {
      setLoadingShift(true);
-     await supabase.from('ambulances').update({ driver_id: null, driver_name: null, status: 'Idle' }).eq('driver_id', userProfile?.id);
+     await supabase.from('ambulances').update({ driver_id: null, status: 'Idle' }).eq('driver_id', userProfile?.id);
      setDriverStatus('OFFLINE');
      setSelectedAmbulanceId('');
      setLoadingShift(false);
