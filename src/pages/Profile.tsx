@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { User, ShieldCheck, ShieldAlert, Edit3, Ambulance, Loader2, Save } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { User, ShieldCheck, ShieldAlert, Edit3, Ambulance, Loader2, Save, Camera } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { supabase } from '../services/supabaseClient';
 import { getProvinces, getRegencies, getDistricts, getVillages } from '../services/regionService';
@@ -10,6 +10,9 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState<string>('');
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState({
     phone: '', full_name: '', ktp: '', gender: '',
@@ -36,6 +39,7 @@ export default function Profile() {
           regency: data.regency || '', province: data.province || '', address: data.address || '',
           vehicle_id: '', provinceId: '', regencyId: '', districtId: '', villageId: ''
         };
+        if (data.photo_url) setPhotoUrl(data.photo_url);
         
         if (role === 'Supir') {
           const { data: ambData } = await supabase.from('ambulances').select('*').eq('driver_id', data.id).single();
@@ -108,7 +112,29 @@ export default function Profile() {
     }
   };
 
-
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      showNotification('Ukuran foto maksimal 2MB', 'error');
+      return;
+    }
+    setUploadingPhoto(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async (ev) => {
+        const base64 = ev.target?.result as string;
+        setPhotoUrl(base64);
+        await supabase.from('profiles').update({ photo_url: base64 }).eq('phone', userProfile?.phone);
+        showNotification('Foto profil berhasil diperbarui!', 'success');
+        setUploadingPhoto(false);
+      };
+      reader.readAsDataURL(file);
+    } catch {
+      showNotification('Gagal mengunggah foto', 'error');
+      setUploadingPhoto(false);
+    }
+  };
 
   const handleProvinceChange = async (id: string, name: string) => {
     setFormData({ ...formData, province: name, provinceId: id, regency: '', district: '', village: '' });
@@ -142,12 +168,29 @@ export default function Profile() {
       
       {/* Header Profile Info */}
       <div style={{ padding: '32px 24px 24px', backgroundColor: role === 'Supir' ? '#2563eb' : 'var(--primary-red)', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        {/* Photo Avatar */}
         <div style={{ position: 'relative', marginBottom: '16px' }}>
-          <div style={{ width: '96px', height: '96px', borderRadius: '50%', backgroundColor: 'white', border: '4px solid rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-            {role === 'Supir' ? <Ambulance size={48} color="#2563eb" /> : <User size={48} color="var(--primary-red)" />}
+          <div
+            onClick={() => photoInputRef.current?.click()}
+            style={{ width: '96px', height: '96px', borderRadius: '50%', backgroundColor: 'white', border: '4px solid rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', cursor: 'pointer', position: 'relative' }}
+          >
+            {photoUrl ? (
+              <img src={photoUrl} alt="Foto Profil" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              role === 'Supir' ? <Ambulance size={48} color="#2563eb" /> : <User size={48} color="var(--primary-red)" />
+            )}
+            {/* Upload overlay */}
+            <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.35)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s' }} className="photo-overlay">
+              {uploadingPhoto ? <Loader2 size={24} color="white" className="animate-spin" /> : <Camera size={24} color="white" />}
+            </div>
+          </div>
+          <input ref={photoInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoUpload} />
+          {/* Camera icon always visible at corner */}
+          <div onClick={() => photoInputRef.current?.click()} style={{ position: 'absolute', bottom: 0, right: 0, backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: '50%', padding: '4px', border: '2px solid white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {uploadingPhoto ? <Loader2 size={14} color="#475569" className="animate-spin" /> : <Camera size={14} color="#475569" />}
           </div>
           {isVerified && (
-            <div style={{ position: 'absolute', bottom: 0, right: 0, backgroundColor: '#10b981', borderRadius: '50%', padding: '4px', border: '2px solid white' }}>
+            <div style={{ position: 'absolute', bottom: 0, left: 0, backgroundColor: '#10b981', borderRadius: '50%', padding: '4px', border: '2px solid white' }}>
               <ShieldCheck size={16} color="white" />
             </div>
           )}

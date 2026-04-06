@@ -334,6 +334,11 @@ if (typeof window !== 'undefined') {
         };
         
         if (mappedSOS.status === 'COMPLETED') {
+           // Simpan riwayat chat UNTUK SEMUA PERAN sebelum dihapus (warga & supir)
+           const { chatMessages, chatHistory, activeSOS: prevSOS } = useStore.getState();
+           if (prevSOS?.id && chatMessages.length > 0) {
+             useStore.setState({ chatHistory: { ...chatHistory, [prevSOS.id]: chatMessages } });
+           }
            useStore.setState({ activeSOS: null, driverStatus: 'STANDBY', chatMessages: [] });
         } else {
            const prev = useStore.getState().activeSOS;

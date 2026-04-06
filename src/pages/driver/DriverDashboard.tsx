@@ -326,40 +326,44 @@ export default function DriverDashboard() {
         <div style={{ overflowX: 'auto' }}>
            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
               <thead>
-                 <tr style={{ borderBottom: '2px solid #e2e8f0', color: '#64748b' }}>
-                    <th style={{ padding: '10px 4px' }}>Pasien (Jenis)</th>
-                    <th style={{ padding: '10px 4px' }}>Respon</th>
-                    <th style={{ padding: '10px 4px' }}>Ke TKP</th>
-                    <th style={{ padding: '10px 4px' }}>Ngantar RS</th>
-                    <th style={{ padding: '10px 4px' }}>Total Penuh</th>
+                 <tr style={{ borderBottom: '2px solid #e2e8f0', color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>
+                    <th style={{ padding: '10px 6px' }}>Tanggal</th>
+                    <th style={{ padding: '10px 6px' }}>Nama Pasien</th>
+                    <th style={{ padding: '10px 6px' }}>Jenis Darurat</th>
+                    <th style={{ padding: '10px 6px', textAlign: 'center' }}>Total Waktu Respon</th>
                  </tr>
               </thead>
               <tbody>
-                 {historyLog.length > 0 ? historyLog.map((log, idx) => {
-                    const tStart = log.created_at ? new Date(log.created_at).getTime() : 0;
+                 {historyLog.length > 0 ? historyLog.map((log: any, idx: number) => {
+                    // Total waktu respon: dari accept_at sampai at_destination_at
                     const tAccept = log.accepted_at ? new Date(log.accepted_at).getTime() : 0;
-                    const tArrive = log.arrived_at ? new Date(log.arrived_at).getTime() : 0;
-                    const tHospital = log.en_route_hospital_at ? new Date(log.en_route_hospital_at).getTime() : 0;
-                    const tDestination = log.at_destination_at ? new Date(log.at_destination_at).getTime() : 0;
-                    const tComplete = log.completed_at ? new Date(log.completed_at).getTime() : 0;
-
-                    const diffRespon = tAccept && tStart ? Math.ceil((tAccept - tStart)/60000) + 'm' : '-';
-                    const diffTKP = tArrive && tAccept ? Math.ceil((tArrive - tAccept)/60000) + 'm' : '-';
-                    const diffTrip = tDestination && tHospital ? Math.ceil((tDestination - tHospital)/60000) + 'm' : '-';
-                    const diffTotal = tComplete && tStart ? Math.ceil((tComplete - tStart)/60000) + 'm' : '-';
+                    const tDest   = log.at_destination_at ? new Date(log.at_destination_at).getTime() : 0;
+                    const totalMenit = (tAccept && tDest) ? Math.ceil((tDest - tAccept) / 60000) : null;
+                    const totalLabel = totalMenit !== null
+                      ? totalMenit >= 60
+                        ? `${Math.floor(totalMenit/60)}j ${totalMenit%60}m`
+                        : `${totalMenit} menit`
+                      : '-';
+                    
+                    const tgl = log.created_at
+                      ? new Date(log.created_at).toLocaleDateString('id-ID', { day:'numeric', month:'short', year:'2-digit' })
+                      : '-';
 
                     return (
                         <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                           <td style={{ padding: '12px 4px' }}><strong>{log.patient_name || '-'}</strong><br/><span style={{fontSize:'10px', color:'#94a3b8'}}>{log.emergency_type}</span></td>
-                           <td style={{ padding: '12px 4px' }}>{diffRespon}</td>
-                           <td style={{ padding: '12px 4px' }}>{diffTKP}</td>
-                           <td style={{ padding: '12px 4px' }}>{diffTrip}</td>
-                           <td style={{ padding: '12px 4px', color: '#059669', fontWeight: 700 }}>{diffTotal}</td>
+                           <td style={{ padding: '12px 6px', color: '#64748b', whiteSpace: 'nowrap' }}>{tgl}</td>
+                           <td style={{ padding: '12px 6px', fontWeight: 600, color: '#1e293b' }}>{log.patient_name || '-'}</td>
+                           <td style={{ padding: '12px 6px' }}>
+                             <span style={{ backgroundColor: '#fee2e2', color: '#dc2626', padding: '2px 8px', borderRadius: '20px', fontSize: '11px', fontWeight: 600 }}>
+                               {log.emergency_type || '-'}
+                             </span>
+                           </td>
+                           <td style={{ padding: '12px 6px', textAlign: 'center', color: '#059669', fontWeight: 700 }}>{totalLabel}</td>
                         </tr>
                     )
                  }) : (
                     <tr>
-                       <td colSpan={5} style={{ padding: '20px', textAlign: 'center', color: '#94a3b8' }}>Belum ada riwayat penyelesaian tugas.</td>
+                       <td colSpan={4} style={{ padding: '20px', textAlign: 'center', color: '#94a3b8' }}>Belum ada riwayat penyelesaian tugas.</td>
                     </tr>
                  )}
               </tbody>
