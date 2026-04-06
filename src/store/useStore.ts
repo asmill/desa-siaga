@@ -156,22 +156,17 @@ export const useStore = create<AppState>()(
         const activeSOS = { id: data.id, patientName: name, patientCoords: coords as [number, number], status: 'PENDING' as SOSStatus, emergencyType, locationMethod, targetedDriverId: targetedDriverId || undefined };
         set({ activeSOS });
 
-        // --- Eksekusi Push Notification OneSignal via REST API ---
+        // --- Eksekusi Push Notification via Vercel Serverless (Bypass CORS) ---
         try {
-           const restKey = import.meta.env.VITE_ONESIGNAL_REST_KEY;
-           if (restKey && standbyDriverIds.length > 0) {
+           if (standbyDriverIds.length > 0) {
              const payload = {
-                app_id: "f48de674-ea17-4e38-b10f-a2808fcae5f8",
-                include_aliases: { external_id: standbyDriverIds },
-                target_channel: "push",
-                contents: { en: `Darurat Medis: ${emergencyType}! Segera buka aplikasi.` },
-                headings: { en: "🚨 PANGGILAN SOS MASUK! 🚨" }
+                targetIds: standbyDriverIds,
+                emergencyType
              };
-             await fetch('https://onesignal.com/api/v1/notifications', {
+             await fetch('/api/push', {
                method: 'POST',
                headers: {
-                 'Content-Type': 'application/json',
-                 'Authorization': `Basic ${restKey}`
+                 'Content-Type': 'application/json'
                },
                body: JSON.stringify(payload)
              });
@@ -273,6 +268,19 @@ export const useStore = create<AppState>()(
   )
 );
 
+// Helper: Request browser notification permission + show native notification
+function requestNotifPermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
+
+function showBrowserNotif(title: string, body: string, icon = '/favicon.ico') {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    new Notification(title, { body, icon });
+  }
+}
+
 // Subscribe to Supabase Postgres Changes
 if (typeof window !== 'undefined') {
   // Listen for SOS_EVENTS table
@@ -298,7 +306,15 @@ if (typeof window !== 'undefined') {
         if (mappedSOS.status === 'COMPLETED') {
            useStore.setState({ activeSOS: null, driverStatus: 'STANDBY', chatMessages: [] });
         } else {
+           const prev = useStore.getState().activeSOS;
            useStore.setState({ activeSOS: mappedSOS });
+           // Show browser notif only on new SOS insert
+           if (!prev && mappedSOS.status === 'PENDING') {
+             showBrowserNotif(
+               '🚨 PANGGILAN SOS MASUK!',
+               `Darurat Medis: ${mappedSOS.emergencyType} - ${mappedSOS.patientName}`
+             );
+           }
            // If a new SOS started from nowhere and we didn't have chat, fetch chat
            const { chatMessages } = useStore.getState();
            if (chatMessages.length === 0) {
@@ -314,12 +330,22 @@ if (typeof window !== 'undefined') {
   supabase.channel('public:sos_messages')
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sos_messages' }, (payload) => {
        const newMsg = payload.new as SOSMessage;
-       const { activeSOS, chatMessages } = useStore.getState();
+       const { activeSOS, chatMessages, userProfile } = useStore.getState();
        
        if (activeSOS && activeSOS.id === payload.new.event_id) {
           useStore.setState({ chatMessages: [...chatMessages, newMsg] });
+          // Show browser notification for incoming chat from OTHER party
+          if (newMsg.sender_id !== userProfile?.id) {
+            showBrowserNotif(
+              `💬 Pesan dari ${newMsg.sender_name || 'Tim Darurat'}`,
+              newMsg.message || 'Pesan baru diterima'
+            );
+          }
        }
     }).subscribe();
+
+  // Request notification permission on load
+  requestNotifPermission();
 
   // Listen for PROFILES table to automatically update role if admin changes it
   supabase.channel('public:profiles')
