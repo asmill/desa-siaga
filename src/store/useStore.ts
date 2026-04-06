@@ -280,24 +280,24 @@ async function showBrowserNotif(title: string, body: string, icon = '/favicon.ic
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   
   try {
-    // Coba pakai Service Worker (muncul di latar belakang)
     if ('serviceWorker' in navigator) {
-      const registration = await navigator.serviceWorker.getRegistration('/OneSignalSDKWorker.js');
-      if (registration) {
-        await registration.showNotification(title, {
+      const registration = await Promise.race([
+        navigator.serviceWorker.ready,
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000))
+      ]);
+      if (registration && 'showNotification' in (registration as ServiceWorkerRegistration)) {
+        await (registration as ServiceWorkerRegistration).showNotification(title, {
           body,
           icon,
-          badge: icon,
           requireInteraction: true,
           tag: 'desasiaga-notif'
         } as NotificationOptions);
         return;
       }
     }
-  } catch (_) { /* fallback */ }
+  } catch (e) { console.warn('[Notif SW Error]', e); }
   
-  // Fallback: langsung (hanya muncul jika tab aktif)
-  new Notification(title, { body, icon });
+  try { new Notification(title, { body, icon }); } catch(_) {}
 }
 
 // Subscribe to Supabase Postgres Changes

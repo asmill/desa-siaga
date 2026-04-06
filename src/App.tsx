@@ -36,10 +36,23 @@ function ToastContainer() {
 
 function App() {
   useEffect(() => {
+    // Init OneSignal untuk push notifications saat app tertutup
     OneSignal.init({
       appId: "f48de674-ea17-4e38-b10f-a2808fcae5f8",
       allowLocalhostAsSecureOrigin: true
     }).catch(console.error);
+
+    // Daftar Service Worker untuk notifikasi latar belakang Android
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/OneSignalSDKWorker.js', { scope: '/' })
+        .then(reg => console.log('[SW] Registered, scope:', reg.scope))
+        .catch(err => console.warn('[SW] Registration failed:', err));
+    }
+    
+    // Minta izin notifikasi
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
   }, []);
 
   return (

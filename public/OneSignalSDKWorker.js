@@ -1,8 +1,9 @@
-// Service Worker untuk DesaSiaga — Notifikasi Latar Belakang SOS & Chat
-// OneSignal SDK (untuk Push Notifications via OneSignal)
+// Service Worker DesaSiaga — Notifikasi Latar Belakang SOS & Chat
+
+// OneSignal SDK
 importScripts("https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js");
 
-// Menangkap pesan dari halaman utama untuk menampilkan notifikasi
+// Tangani notifikasi yang dikirim via postMessage dari halaman utama
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
     const { title, body, icon } = event.data;
@@ -10,9 +11,8 @@ self.addEventListener('message', (event) => {
       body,
       icon: icon || '/favicon.ico',
       badge: '/favicon.ico',
-      vibrate: [300, 100, 300, 100, 600],
-      requireInteraction: true,  // Notifikasi tidak hilang sendiri sampai diklik
-      tag: 'desasiaga-sos'       // Mencegah duplicate
+      requireInteraction: true,
+      tag: 'desasiaga-sos'
     });
   }
 });
@@ -27,9 +27,7 @@ self.addEventListener('notificationclick', (event) => {
           return client.focus();
         }
       }
-      if (clients.openWindow) {
-        return clients.openWindow('/');
-      }
+      if (clients.openWindow) return clients.openWindow('/');
     })
   );
 });
