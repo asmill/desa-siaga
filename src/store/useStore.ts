@@ -150,6 +150,30 @@ export const useStore = create<AppState>()(
 
         const activeSOS = { id: data.id, patientName: name, patientCoords: coords as [number, number], status: 'PENDING' as SOSStatus, emergencyType, locationMethod, targetedDriverId };
         set({ activeSOS });
+
+        // --- Eksekusi Push Notification OneSignal via REST API ---
+        try {
+           const restKey = import.meta.env.VITE_ONESIGNAL_REST_KEY;
+           if (restKey && targetedDriverId) {
+             const payload = {
+                app_id: "f48de674-ea17-4e38-b10f-a2808fcae5f8",
+                include_aliases: { external_id: [targetedDriverId] },
+                target_channel: "push",
+                contents: { en: `Darurat Medis: ${emergencyType}! Segera buka aplikasi.` },
+                headings: { en: "🚨 PANGGILAN SOS MASUK! 🚨" }
+             };
+             await fetch('https://onesignal.com/api/v1/notifications', {
+               method: 'POST',
+               headers: {
+                 'Content-Type': 'application/json',
+                 'Authorization': `Basic ${restKey}`
+               },
+               body: JSON.stringify(payload)
+             });
+           }
+        } catch (err) {
+           console.error("Gagal mengirim Notifikasi Push:", err);
+        }
       },
       acceptSOS: async (driverName) => {
         const { activeSOS, userProfile } = get();

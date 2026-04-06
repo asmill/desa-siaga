@@ -1,4 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { useEffect } from 'react';
+import OneSignal from 'react-onesignal';
 import Layout from './components/Layout';
 import RoleGuard from './components/RoleGuard';
 import Home from './pages/Home';
@@ -33,6 +35,13 @@ function ToastContainer() {
 }
 
 function App() {
+  useEffect(() => {
+    OneSignal.init({
+      appId: "f48de674-ea17-4e38-b10f-a2808fcae5f8",
+      allowLocalhostAsSecureOrigin: true
+    }).catch(console.error);
+  }, []);
+
   return (
     <BrowserRouter>
       <ToastContainer />

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import OneSignal from 'react-onesignal';
 import { CheckCircle, Navigation, Phone, AlertCircle, CalendarClock, MapPin, Activity, MessageCircle, ChevronLeft } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { supabase } from '../../services/supabaseClient';
@@ -89,6 +90,13 @@ export default function DriverDashboard() {
      setLoadingShift(false);
      if (error) return showNotification('Gagal menghubungi unit.', 'error');
      
+     // 1. OneSignal Login mapping driver's permanent ID to Device
+     if (userProfile?.id) {
+       await OneSignal.login(userProfile.id);
+       // 2. Prompt Notification if they haven't allowed it yet!
+       OneSignal.Slidedown.promptPush(); 
+     }
+
      setDriverStatus('STANDBY');
      showNotification('Anda bersatus AKTIF (Online). Anda kini siaga!', 'success');
   };
