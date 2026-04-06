@@ -11,6 +11,8 @@ export default function DriverDashboard() {
   const [selectedDestination, setSelectedDestination] = useState<string>("RSUD Terpadu Subang (3KM)");
   const [showChat, setShowChat] = useState(false);
   const [newMessage, setNewMessage] = useState('');
+  const [ambulancesList, setAmbulancesList] = useState<any[]>([]);
+  const [selectedAmbulanceId, setSelectedAmbulanceId] = useState<string>('');
   const [loadingShift, setLoadingShift] = useState(false);
 
   const dummyHospitals = [
@@ -40,8 +42,14 @@ export default function DriverDashboard() {
          if (data) setHistoryLog(data);
       } catch (err) { console.error("Error fetching logs", err); }
     };
+
+    const fetchAmbulances = async () => {
+       const { data } = await supabase.from('ambulances').select('*').order('id', { ascending: true });
+       if (data) setAmbulancesList(data);
+    };
     
     fetchBookings();
+    fetchAmbulances();
     if(userProfile?.id) fetchHistory();
   }, [userProfile?.id]);
 
@@ -81,11 +89,18 @@ export default function DriverDashboard() {
   };
 
   const handleStartShift = async () => {
+     if (!selectedAmbulanceId) return showNotification('Pilih armada ambulans terlebih dahulu!', 'error');
      setLoadingShift(true);
-     // Update just the status of the ambulance currently bound to this driver in Profile
+
+     // Release any old ambulance to be sure
+     await supabase.from('ambulances').update({ driver_id: null, driver_name: null, status: 'Idle' }).eq('driver_id', userProfile?.id);
+     
+     // Bind driver to new ambulance and set Stand By
      const { error } = await supabase.from('ambulances').update({ 
+       driver_id: userProfile?.id,
+       driver_name: userProfile?.full_name,
        status: 'Stand By'
-     }).eq('driver_id', userProfile?.id);
+     }).eq('id', selectedAmbulanceId);
      
      setLoadingShift(false);
      if (error) return showNotification('Gagal menghubungi unit.', 'error');
@@ -103,8 +118,9 @@ export default function DriverDashboard() {
 
   const handleEndShift = async () => {
      setLoadingShift(true);
-     await supabase.from('ambulances').update({ status: 'Idle' }).eq('driver_id', userProfile?.id);
+     await supabase.from('ambulances').update({ driver_id: null, driver_name: null, status: 'Idle' }).eq('driver_id', userProfile?.id);
      setDriverStatus('OFFLINE');
+     setSelectedAmbulanceId('');
      setLoadingShift(false);
      showNotification('Anda telah NONAKTIF (Offline). Silakan beristirahat.', 'success');
   };
@@ -232,12 +248,25 @@ export default function DriverDashboard() {
 
       {/* Status Selector & Shift Panel */}
       <div className="card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        <h3 style={{ margin: 0, fontSize: '15px', color: '#334155' }}>Status Kesiapan Supir (Operasional Kendaraan)</h3>
+        <h3 style={{ margin: 0, fontSize: '15px', color: '#334155' }}>Status Kesiapan Supir & Armada</h3>
         
         {driverStatus === 'OFFLINE' ? (
            <div style={{ backgroundColor: '#f1f5f9', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
              <p style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: 700, color: '#475569' }}>Anda Sedang OFFLINE</p>
-             <p style={{ margin: '0 0 12px', fontSize: '12px', color: '#64748b' }}>Sistem SOS tidak akan masuk. Mobil Anda berstatus "Idle" hari ini.</p>
+             <p style={{ margin: '0 0 12px', fontSize: '12px', color: '#64748b' }}>Pilih armada yang akan Anda gunakan sebelum mengaktifkan radar SOS.</p>
+             
+             <select 
+               value={selectedAmbulanceId} 
+               onChange={(e) => setSelectedAmbulanceId(e.target.value)}
+               className="input-base"
+               style={{ width: '100%', marginBottom: '12px', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+             >
+               <option value="">-- Pilih Kendaraan Menganggur --</option>
+               {ambulancesList.filter(a => !a.driver_id).map(amb => (
+                 <option key={amb.id} value={amb.id}>{amb.vehicle_name} ({amb.plate_number})</option>
+               ))}
+             </select>
+
              <button disabled={loadingShift} onClick={handleStartShift} className="btn btn-primary" style={{ width: '100%', padding: '14px', borderRadius: '12px' }}>
                 Go ONLINE (Mulai Berjaga)
              </button>

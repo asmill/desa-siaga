@@ -9,11 +9,8 @@ export default function Profile() {
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [savingAmb, setSavingAmb] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [isEditingAmb, setIsEditingAmb] = useState(false);
   
-  const [ambulances, setAmbulances] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     phone: '', full_name: '', ktp: '', gender: '',
     dusun: '', rt: '', rw: '', village: '', district: '', regency: '', province: '', address: '', vehicle_id: '',
@@ -43,9 +40,6 @@ export default function Profile() {
         if (role === 'Supir') {
           const { data: ambData } = await supabase.from('ambulances').select('*').eq('driver_id', data.id).single();
           if (ambData) fData.vehicle_id = ambData.id;
-          
-          const { data: allAmb } = await supabase.from('ambulances').select('*');
-          if (allAmb) setAmbulances(allAmb);
         }
 
         setFormData(fData);
@@ -114,25 +108,7 @@ export default function Profile() {
     }
   };
 
-  const handleSaveAmbulance = async () => {
-     setSavingAmb(true);
-     try {
-       // Clear previous driver if any
-       await supabase.from('ambulances').update({ driver_id: null }).eq('driver_id', userProfile?.id);
-       
-       if (formData.vehicle_id) {
-         // Assign to new
-         await supabase.from('ambulances').update({ driver_id: userProfile?.id }).eq('id', formData.vehicle_id);
-       }
-       showNotification('Unit Ambulan yang bertugas berhasil diperbarui!', 'success');
-       setIsEditingAmb(false);
-     } catch(err) {
-       console.error(err);
-       showNotification('Gagal memperbarui data ambulan', 'error');
-     } finally {
-       setSavingAmb(false);
-     }
-  };
+
 
   const handleProvinceChange = async (id: string, name: string) => {
     setFormData({ ...formData, province: name, provinceId: id, regency: '', district: '', village: '' });
@@ -305,39 +281,7 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* Khusus Supir: Kelola Ambulan Terpisah*/}
-        {role === 'Supir' && (
-          <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 style={{ margin: 0, fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}><Ambulance size={18} color="#2563eb" /> Kendaraan Operasional</h3>
-                {!isEditingAmb ? (
-                  <button onClick={() => setIsEditingAmb(true)} style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '13px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <Edit3 size={14} /> Ganti Unit
-                  </button>
-                ) : (
-                  <button disabled={savingAmb} onClick={handleSaveAmbulance} style={{ background: '#2563eb', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    {savingAmb ? <Loader2 className="animate-spin" size={14} /> : <Save size={14} />} Update Kendaraan
-                  </button>
-                )}
-             </div>
-             
-             <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <select 
-                  className="input-base"
-                  value={formData.vehicle_id}
-                  onChange={e => setFormData({...formData, vehicle_id: e.target.value})}
-                  disabled={!isEditingAmb}
-                  style={{ width: '100%', height: '50px' }}
-                >
-                  <option value="">-- Anda Tidak Membawa Ambulan --</option>
-                  {ambulances.map(amb => (
-                    <option key={amb.id} value={amb.id}>{amb.vehicle_name} ({amb.plate_number})</option>
-                  ))}
-                </select>
-                <p style={{ margin: '6px 0 0', fontSize: '11px', color: '#94a3b8' }}>Unit ini memengaruhi data GPS radar publik Anda.</p>
-             </div>
-          </div>
-        )}
+
 
         <button onClick={handleLogout} className="btn" style={{ width: '100%', backgroundColor: '#fef2f2', color: '#ef4444', fontWeight: 700, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
           Keluar (Log Out)
