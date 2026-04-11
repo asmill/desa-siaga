@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { renderToString } from 'react-dom/server';
-import { PhoneCall, User, CheckCircle2, AlertTriangle, Activity, ChevronLeft, Ambulance, MessageCircle, Siren, Loader2, HeartPulse, Car, Baby, Plus, Map as MapIcon, LocateFixed } from 'lucide-react';
+import { PhoneCall, User, CheckCircle2, AlertTriangle, Activity, ChevronLeft, Ambulance, MessageCircle, Siren, Loader2, HeartPulse, Car, Baby, Plus, Map as MapIcon, LocateFixed, Flame, Tornado, ShieldAlert } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { useStore } from '../store/useStore';
@@ -18,9 +18,12 @@ L.Icon.Default.mergeOptions({
 const getEmergencyIcon = (type: string) => {
   let iconComponent;
   let borderColor;
-  if (type === 'Jantung') { iconComponent = <HeartPulse size={28} color="#ef4444" />; borderColor = '#ef4444'; }
+  if (type === 'Jantung' || type === 'Medis') { iconComponent = <HeartPulse size={28} color="#ef4444" />; borderColor = '#ef4444'; }
   else if (type === 'Kecelakaan') { iconComponent = <Car size={28} color="#f59e0b" />; borderColor = '#f59e0b'; }
   else if (type === 'Melahirkan') { iconComponent = <Baby size={28} color="#8b5cf6" />; borderColor = '#8b5cf6'; }
+  else if (type === 'Kebakaran') { iconComponent = <Flame size={28} color="#ea580c" />; borderColor = '#ea580c'; }
+  else if (type === 'Bencana Alam') { iconComponent = <Tornado size={28} color="#0891b2" />; borderColor = '#0891b2'; }
+  else if (type === 'Kriminal') { iconComponent = <ShieldAlert size={28} color="#1e293b" />; borderColor = '#1e293b'; }
   else { iconComponent = <Plus size={28} color="#64748b" />; borderColor = '#64748b'; }
 
   return L.divIcon({
@@ -504,10 +507,9 @@ export default function Home() {
         </div>
       )}
 
-      <div className="sos-container" style={{ margin: '40px auto' }}>
-        <button className="btn-sos" onClick={handleSOSClick} style={{ opacity: isVerified ? 1 : 0.5, transform: sosStep > 0 ? 'scale(0.95)' : 'scale(1)', transition: 'all 0.2s', width: '200px', height: '200px', flexShrink: 0, margin: '0 auto' }}>
-          <PhoneCall size={64} />
-          <span>DARURAT</span>
+      <div className="sos-container" style={{ margin: '80px auto 60px' }}>
+        <button className="btn-sos" onClick={handleSOSClick} style={{ opacity: isVerified ? 1 : 0.5, transform: sosStep > 0 ? 'scale(0.95)' : 'scale(1)' }}>
+          <span style={{ fontSize: '36px' }}>SOS</span>
         </button>
       </div>
 
@@ -649,24 +651,29 @@ export default function Home() {
             {sosStep === 1 && (
               <div style={{ padding: '24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 {[
-                  { id: 'Jantung', icon: <HeartPulse size={32} />, color: '#ef4444', desc: 'Serangan / Sesak' },
-                  { id: 'Kecelakaan', icon: <Car size={32} />, color: '#f59e0b', desc: 'Lalin / Kerja' },
-                  { id: 'Melahirkan', icon: <Baby size={32} />, color: '#8b5cf6', desc: 'Ketuban Pecah' },
-                  { id: 'Lainnya', icon: <Plus size={32} />, color: '#64748b', desc: 'Darurat Medis Lain' }
+                  { id: 'Medis', icon: <HeartPulse size={30} />, color: '#ef4444', desc: 'Sakit Medis' },
+                  { id: 'Kecelakaan', icon: <Car size={30} />, color: '#f59e0b', desc: 'Kecelakaan' },
+                  { id: 'Kebakaran', icon: <Flame size={30} />, color: '#ea580c', desc: 'Kebakaran' },
+                  { id: 'Bencana Alam', icon: <Tornado size={30} />, color: '#0891b2', desc: 'Bencana Alam' },
+                  { id: 'Melahirkan', icon: <Baby size={30} />, color: '#8b5cf6', desc: 'Melahirkan' },
+                  { id: 'Kriminal', icon: <ShieldAlert size={30} />, color: '#1e293b', desc: 'Tindak Kriminal' }
                 ].map((type) => (
                   <button 
                     key={type.id}
                     onClick={() => { setSelectedType(type.id); setSosStep(2); }}
                     style={{ 
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', padding: '20px', 
-                      backgroundColor: 'white', border: `2px solid ${selectedType === type.id ? type.color : '#e2e8f0'}`,
-                      borderRadius: '16px', cursor: 'pointer', transition: 'all 0.2s',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', padding: '16px 12px', 
+                      backgroundColor: 'transparent', border: 'none', cursor: 'pointer', transition: 'transform 0.1s',
                     }}
+                    onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+                    onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                    onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                   >
-                    <div style={{ color: type.color }}>{type.icon}</div>
+                    <div style={{ padding: '16px', borderRadius: '50%', backgroundColor: 'white', border: `2px solid ${type.color}`, color: type.color, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.06)' }}>
+                      {type.icon}
+                    </div>
                     <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: '15px', fontWeight: 800, color: '#1e293b' }}>{type.id}</div>
-                      <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>{type.desc}</div>
+                      <div style={{ fontSize: '14px', fontWeight: 700, color: '#334155' }}>{type.desc}</div>
                     </div>
                   </button>
                 ))}

@@ -79,37 +79,55 @@
 }
 
 .btn-sos {
-  width: 200px;
-  height: 200px;
+  width: 140px;
+  height: 140px;
   border-radius: 50%;
-  background: radial-gradient(circle, var(--primary-red) 0%, #b91c1c 100%);
+  background: linear-gradient(135deg, #ff6b6b 0%, #dc2626 100%);
   color: white;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  border: 8px solid #fecaca;
-  box-shadow: 0 10px 25px rgba(220, 38, 38, 0.4);
+  border: none;
+  box-shadow: 0 8px 30px rgba(220, 38, 38, 0.5), inset 0 4px 10px rgba(255, 255, 255, 0.3);
   cursor: pointer;
-  transition: transform 0.1s;
-  animation: pulse 2s infinite;
+  transition: transform 0.15s ease-out;
+  position: relative;
+  z-index: 10;
+}
+
+/* Layered Halo Effects */
+.btn-sos::before, .btn-sos::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background-color: rgba(239, 68, 68, 0.4);
+  z-index: -1;
+  animation: radarPulse 2.5s infinite cubic-bezier(0.215, 0.610, 0.355, 1.000);
+}
+
+.btn-sos::after {
+  animation-delay: 1.25s;
 }
 
 .btn-sos:active {
-  transform: scale(0.95);
+  transform: scale(0.92);
 }
 
 .btn-sos span {
-  font-size: 28px;
+  font-size: 32px;
   font-weight: 800;
-  margin-top: 8px;
-  letter-spacing: 1px;
+  letter-spacing: 2px;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
-@keyframes pulse {
-  0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); }
-  70% { box-shadow: 0 0 0 25px rgba(220, 38, 38, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+@keyframes radarPulse {
+  0% { width: 140px; height: 140px; opacity: 1; border: 2px solid rgba(239, 68, 68, 0); }
+  50% { border: 2px solid rgba(239, 68, 68, 0.6); }
+  100% { width: 320px; height: 320px; opacity: 0; border: 6px solid rgba(239, 68, 68, 0); }
 }
 
 @keyframes slideDown {
