@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { renderToString } from 'react-dom/server';
-import { PhoneCall, User, CheckCircle2, AlertTriangle, Activity, ChevronLeft, Ambulance, MessageCircle, Siren, Loader2, HeartPulse, Car, Baby, Plus, Map as MapIcon, LocateFixed, Flame, Tornado, ShieldAlert } from 'lucide-react';
+import { PhoneCall, User, CheckCircle2, AlertTriangle, Activity, ChevronLeft, Ambulance, MessageCircle, Siren, Loader2, HeartPulse, Car, Baby, Plus, Map as MapIcon, LocateFixed, Flame, Tornado, ShieldAlert, Volume2 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { useStore } from '../store/useStore';
@@ -508,8 +508,9 @@ export default function Home() {
       )}
 
       <div className="sos-container" style={{ margin: '80px auto 60px' }}>
-        <button className="btn-sos" onClick={handleSOSClick} style={{ opacity: isVerified ? 1 : 0.5, transform: sosStep > 0 ? 'scale(0.95)' : 'scale(1)' }}>
-          <span style={{ fontSize: '36px' }}>SOS</span>
+        <button className="btn-sos" onClick={handleSOSClick} style={{ opacity: isVerified ? 1 : 0.5, transform: sosStep > 0 ? 'scale(0.95)' : 'scale(1)', gap: '8px' }}>
+          <Volume2 size={48} color="rgba(255, 255, 255, 0.9)" />
+          <span style={{ fontSize: '32px' }}>SOS</span>
         </button>
       </div>
 
