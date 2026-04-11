@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { MessageCircle, Send, ShieldAlert, Clock, ChevronLeft } from 'lucide-react';
+import { MessageCircle, Send, ShieldAlert, Clock, ChevronLeft, User } from 'lucide-react';
 import { useStore } from '../store/useStore';
 
 export default function Messages() {

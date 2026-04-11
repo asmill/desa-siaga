@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import OneSignal from 'react-onesignal';
-import { CheckCircle, Navigation, Phone, AlertCircle, CalendarClock, MapPin, Activity, MessageCircle, ChevronLeft } from 'lucide-react';
+import { CheckCircle, Navigation, Phone, AlertCircle, CalendarClock, MapPin, Activity, MessageCircle, ChevronLeft, User } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { supabase } from '../../services/supabaseClient';
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
