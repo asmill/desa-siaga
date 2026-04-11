@@ -87,7 +87,7 @@ function App() {
         {/* App routes */}
         <Route path="/" element={<Layout />}>
           <Route index element={
-            <RoleGuard allowedRoles={['Masyarakat']}>
+            <RoleGuard allowedRoles={['Masyarakat', 'Mitra']}>
               <Home />
             </RoleGuard>
           } />

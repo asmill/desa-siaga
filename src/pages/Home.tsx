@@ -5,6 +5,8 @@ import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-
 import L from 'leaflet';
 import { useStore } from '../store/useStore';
 import { supabase } from '../services/supabaseClient';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import '../App.css';
 
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -85,6 +87,93 @@ function MapCenterSync({ coords }: { coords: [number, number] }) {
   return null;
 }
 
+const MitraHomeDashboard = ({ sosHistory, userProfile }: { sosHistory: any[], userProfile: any }) => {
+  const generateMonthlyReport = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text(`Laporan Bulanan SOS - Mitra: ${userProfile?.mitraCategory} (${userProfile?.full_name})`, 14, 20);
+    doc.setFontSize(11);
+    doc.text(`Periode Cetak: ${new Date().toLocaleDateString('id-ID')}`, 14, 28);
+    
+    const tableColumn = ["Waktu", "Status", "Pasien", "Tipe Darurat", "Penolong"];
+    const tableRows: any[] = [];
+    
+    sosHistory.forEach(s => {
+      tableRows.push([
+         new Date(s.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+         s.status,
+         s.patient_name || 'NN',
+         s.emergency_type,
+         s.driver_name || '-'
+      ]);
+    });
+    
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 35,
+      theme: 'grid',
+      headStyles: { fillColor: [239, 68, 68] }
+    });
+    
+    doc.save(`Laporan_SOS_${userProfile?.mitraCategory}_${new Date().getTime()}.pdf`);
+  };
+
+  return (
+    <div className="home-content">
+      <div className="card" style={{ marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <h2 style={{ margin: 0, fontSize: '18px' }}>Beranda Mitra Siaga</h2>
+        <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)' }}>Memonitor aktivitas darurat relevan di wilayah Anda.</p>
+      </div>
+
+      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+        <div style={{ padding: '16px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3 style={{ margin: 0, fontSize: '15px' }}>Notifikasi SOS Terkini</h3>
+          <div style={{ padding: '4px 12px', backgroundColor: '#eff6ff', color: '#2563eb', borderRadius: '12px', fontSize: '12px', fontWeight: 700 }}>
+            {sosHistory.length} Kasus Filtered
+          </div>
+        </div>
+        <div>
+          {sosHistory.length === 0 ? (
+            <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
+              Belum ada data riwayat SOS untuk kategori instansi Anda.
+            </div>
+          ) : (
+            sosHistory.slice(0, 10).map((item, index) => (
+              <div key={item.id} style={{ padding: '16px', display: 'flex', gap: '16px', borderBottom: index < Math.min(sosHistory.length, 10) - 1 ? '1px solid var(--border-color)' : 'none' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'var(--bg-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Activity size={20} color="var(--primary-red)" />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
+                    <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 700 }}>{item.emergency_type}</h4>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>
+                      {new Date(item.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                      <User size={12} /> {item.patient_name || 'Tidak ada'}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                      <CheckCircle2 size={12} /> Status: {item.status}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+        <div style={{ padding: '16px', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'center' }}>
+          <button onClick={generateMonthlyReport} className="btn" style={{ width: '100%', padding: '12px', borderRadius: '12px', backgroundColor: 'var(--bg-color)', border: '1px solid var(--border-color)', color: 'var(--text-main)', fontWeight: 700, fontSize: '14px' }}>
+            Unduh Laporan Bulanan (PDF)
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 
 export default function Home() {
   const { isVerified, userProfile, userCoords, activeSOS, triggerSOS, resetSOS, role, chatMessages, sendChatMessage, showNotification } = useStore();
@@ -117,13 +206,37 @@ export default function Home() {
     if (!userProfile) return;
     const fetchHomeData = async () => {
        // 1. Fetch SOS History
-       const { data: histObj } = await supabase.from('sos_events')
-          .select('*')
-          .eq('patient_id', userProfile.id)
-          .eq('status', 'COMPLETED')
-          .order('created_at', { ascending: false })
-          .limit(20);
-       if (histObj) setSosHistory(histObj);
+       let query = supabase.from('sos_events').select('*').order('created_at', { ascending: false });
+       if (role === 'Masyarakat') {
+          query = query.eq('patient_id', userProfile.id).eq('status', 'COMPLETED').limit(20);
+       } else if (role === 'Mitra') {
+          query = query.limit(100); // Admin / Mitra get all to filter later
+       }
+       
+       const { data: histObj } = await query;
+       if (histObj) {
+          if (role === 'Mitra') {
+             const category = userProfile?.mitraCategory || '';
+             const relevant = histObj.filter(s => {
+                if (category === 'Klinik' || category === 'Kader' || category === 'Bidan') {
+                   return ['Medis', 'Melahirkan', 'Kecelakaan'].includes(s.emergency_type);
+                }
+                if (category === 'Babinsa' || category === 'Kamtibmas') {
+                   return ['Tindak Kriminal', 'Kecelakaan', 'Bencana Alam', 'Kebakaran'].includes(s.emergency_type);
+                }
+                if (category === 'Pemadam') {
+                   return ['Kebakaran'].includes(s.emergency_type);
+                }
+                if (category === 'Linmas') {
+                   return true; // Linmas sees all
+                }
+                return true;
+             });
+             setSosHistory(relevant);
+          } else {
+             setSosHistory(histObj);
+          }
+       }
 
        // 2. Fetch Ambulances Status
        const { data: ambObj } = await supabase.from('ambulances')
@@ -264,6 +377,11 @@ export default function Home() {
     setSosStep(0);
   };
 
+  // --- MITRA DASHBOARD RENDER ---
+  if (role !== 'Masyarakat' && role !== 'Supir') {
+     return <MitraHomeDashboard sosHistory={sosHistory} userProfile={userProfile} />;
+  }
+
   // --- RENDER BLOCKERS ---
   if (isGettingGPS) {
     return (
@@ -378,7 +496,7 @@ export default function Home() {
           </MapContainer>
 
           <div style={{ position: 'absolute', top: 20, left: 20, right: 20, zIndex: 1000 }}>
-            <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '16px', backgroundColor: 'white', borderLeft: `6px solid ${mainColor}`, boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}>
+            <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '16px', backgroundColor: 'var(--surface-color)', borderLeft: `6px solid ${mainColor}`, boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}>
               <div style={{ padding: '8px', backgroundColor: bgColor, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {status === 'ACCEPTED' ? <Siren size={32} color={mainColor} className="animate-pulse" /> : <CheckCircle2 size={32} color={mainColor} />}
               </div>
@@ -394,20 +512,20 @@ export default function Home() {
           </div>
         </div>
 
-        <div style={{ padding: '24px', backgroundColor: 'white', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', boxShadow: '0 -4px 12px rgba(0,0,0,0.05)', zIndex: 1000 }}>
+        <div style={{ padding: '24px', backgroundColor: 'var(--surface-color)', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', boxShadow: '0 -4px 12px rgba(0,0,0,0.05)', zIndex: 1000 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <User size={24} color="#64748b" />
+            <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: 'var(--bg-color)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <User size={24} color="var(--text-muted)" />
             </div>
             <div style={{ flex: 1 }}>
-              <h4 style={{ margin: 0, fontSize: '16px' }}>{activeSOS?.driverName || 'Supardi'} (Supir)</h4>
+              <h4 style={{ margin: 0, fontSize: '16px', color: 'var(--text-main)' }}>{activeSOS?.driverName || 'Supardi'} (Supir)</h4>
               <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)' }}>Ambulans Siaga Desa</p>
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
               <button 
                 onClick={() => setShowChat(true)} 
                 title="Tanya Supir"
-                style={{ width: '44px', height: '44px', borderRadius: '50%', backgroundColor: '#f1f5f9', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'transform 0.2s' }}
+                style={{ width: '44px', height: '44px', borderRadius: '50%', backgroundColor: 'var(--bg-color)', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'transform 0.2s' }}
               >
                 <MessageCircle size={22} color="#2563eb" />
               </button>
@@ -423,7 +541,7 @@ export default function Home() {
             </button>
           )}
           {(status === 'EN_ROUTE_TO_HOSPITAL' || status === 'ARRIVED_AT_SCENE') && (
-            <div style={{ textAlign: 'center', fontSize: '14px', color: 'var(--text-muted)', marginTop: '10px', padding: '10px', backgroundColor: '#f8fafc', borderRadius: '8px' }}>
+            <div style={{ textAlign: 'center', fontSize: '14px', color: 'var(--text-muted)', marginTop: '10px', padding: '10px', backgroundColor: 'var(--bg-color)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
               Proses sedang berlangsung. Anda tidak dapat membatalkan lagi.
             </div>
           )}
@@ -431,7 +549,7 @@ export default function Home() {
 
         {/* Chat Modal */}
         {showChat && (
-          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'white', zIndex: 2000, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'var(--bg-color)', zIndex: 2000, display: 'flex', flexDirection: 'column' }}>
             <div style={{ padding: '16px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '16px', backgroundColor: 'var(--primary-red)', color: 'white' }}>
               <button onClick={() => setShowChat(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'white', display: 'flex', alignItems: 'center' }}>
                 <ChevronLeft size={28} />
