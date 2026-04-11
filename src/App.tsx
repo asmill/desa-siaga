@@ -35,6 +35,16 @@ function ToastContainer() {
 }
 
 function App() {
+  const { isDarkMode } = useStore();
+
+  useEffect(() => {
+    if (isDarkMode) {
+      document.body.classList.add('dark-mode');
+    } else {
+      document.body.classList.remove('dark-mode');
+    }
+  }, [isDarkMode]);
+
   useEffect(() => {
     // Init OneSignal untuk push notifications saat app tertutup
     OneSignal.init({

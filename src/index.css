@@ -129,7 +129,7 @@ h1, h2, h3, h4 {
 .input-base {
   width: 100%;
   padding: 14px 16px;
-  background-color: #f8fafc;
+  background-color: var(--bg-color);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   font-family: var(--font-family);
@@ -141,14 +141,20 @@ h1, h2, h3, h4 {
   appearance: none;
 }
 
+.input-base:disabled {
+  background-color: var(--border-color);
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
 .input-base:focus {
   border-color: var(--primary-red);
-  background-color: white;
+  background-color: var(--surface-color);
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
 }
 
 .input-base::placeholder {
-  color: #94a3b8;
+  color: var(--text-muted);
 }
 
 textarea.input-base {

@@ -250,7 +250,7 @@ export default function Profile() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div>
-              <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Nomor HP</label>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>Nomor HP</label>
               <input className="input-base" value={formData.phone} disabled style={{ backgroundColor: '#f1f5f9', color: '#94a3b8' }} />
             </div>
 
@@ -277,11 +277,11 @@ export default function Profile() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Nomor Induk Kependudukan (KTP)</label>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>Nomor Induk Kependudukan (KTP)</label>
                 <input className="input-base" value={formData.ktp} onChange={e => setFormData({...formData, ktp: e.target.value})} disabled={!isEditing} />
               </div>
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Jenis Kelamin</label>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>Jenis Kelamin</label>
                 <select className="input-base" value={formData.gender} onChange={e => setFormData({...formData, gender: e.target.value})} disabled={!isEditing} style={{ padding: '12px' }}>
                   <option value="">Pilih</option>
                   <option value="L">Laki-laki</option>
@@ -292,7 +292,7 @@ export default function Profile() {
             
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Provinsi</label>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>Provinsi</label>
                 {!isEditing ? (
                    <input className="input-base" value={formData.province} disabled />
                 ) : (
@@ -303,7 +303,7 @@ export default function Profile() {
                 )}
               </div>
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Kabupaten</label>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>Kabupaten</label>
                 {!isEditing ? (
                    <input className="input-base" value={formData.regency} disabled />
                 ) : (
@@ -317,7 +317,7 @@ export default function Profile() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Kecamatan</label>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>Kecamatan</label>
                 {!isEditing ? (
                    <input className="input-base" value={formData.district} disabled />
                 ) : (
@@ -328,7 +328,7 @@ export default function Profile() {
                 )}
               </div>
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Desa</label>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>Desa</label>
                 {!isEditing ? (
                    <input className="input-base" value={formData.village} disabled />
                 ) : (
@@ -342,21 +342,21 @@ export default function Profile() {
             
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>RT</label>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>RT</label>
                 <input className="input-base" value={formData.rt} onChange={e => setFormData({...formData, rt: e.target.value})} disabled={!isEditing} />
               </div>
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>RW</label>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>RW</label>
                 <input className="input-base" value={formData.rw} onChange={e => setFormData({...formData, rw: e.target.value})} disabled={!isEditing} />
               </div>
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Dusun</label>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>Dusun</label>
                 <input className="input-base" value={formData.dusun} onChange={e => setFormData({...formData, dusun: e.target.value})} disabled={!isEditing} />
               </div>
             </div>
 
             <div>
-              <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Alamat Lengkap</label>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>Alamat Lengkap</label>
               <textarea className="input-base" rows={3} value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} disabled={!isEditing} />
             </div>
           </div>

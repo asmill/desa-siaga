@@ -60,7 +60,7 @@ export default function Messages() {
   if (viewingHistorySosId && chatHistory[viewingHistorySosId]) {
     const histMsgs = chatHistory[viewingHistorySosId];
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#f1f5f9' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: 'var(--bg-color)' }}>
         <div style={{ padding: '16px', background: 'linear-gradient(135deg, #1e293b, #334155)', color: 'white', display: 'flex', alignItems: 'center', gap: '12px' }}>
           <button onClick={() => setViewingHistorySosId(null)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', padding: 0 }}>
             <ChevronLeft size={24} />
@@ -93,7 +93,7 @@ export default function Messages() {
   if (!activeSOS?.id) {
     const historyEntries = Object.entries(chatHistory);
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', paddingBottom: '90px', backgroundColor: '#f8fafc' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', paddingBottom: '90px', backgroundColor: 'var(--bg-color)' }}>
         <div style={{ padding: '24px', backgroundColor: 'var(--primary-red)', color: 'white' }}>
           <h1 style={{ margin: 0, fontSize: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <MessageCircle size={24} /> Saluran Koordinasi Darurat
@@ -117,12 +117,12 @@ export default function Messages() {
             {historyEntries.map(([sosId, msgs]: [string, any[]]) => {
               const last = msgs[msgs.length - 1];
               return (
-                <button key={sosId} onClick={() => setViewingHistorySosId(sosId)} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
+                <button key={sosId} onClick={() => setViewingHistorySosId(sosId)} style={{ background: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '16px', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
                   <div style={{ width: '42px', height: '42px', borderRadius: '50%', backgroundColor: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <Clock size={20} color="#ef4444" />
                   </div>
                   <div style={{ flex: 1, overflow: 'hidden' }}>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#334155' }}>Kejadian Darurat ({msgs.length} pesan)</div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-main)' }}>Kejadian Darurat ({msgs.length} pesan)</div>
                     <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {last?.sender_name}: {last?.message}
                     </div>
@@ -139,11 +139,11 @@ export default function Messages() {
 
   // --- View: SOS Aktif – Chat Langsung ---
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#f1f5f9' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: 'var(--bg-color)' }}>
       
       {/* In-App Popup */}
       {newChatPopup && (
-        <div style={{ position: 'fixed', top: '16px', left: '50%', transform: 'translateX(-50%)', backgroundColor: '#1e293b', color: 'white', padding: '12px 20px', borderRadius: '12px', zIndex: 99999, maxWidth: '90vw', fontSize: '13px', fontWeight: 600, boxShadow: '0 4px 20px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', gap: '10px', animation: 'slideDown 0.3s ease-out' }}>
+        <div style={{ position: 'fixed', top: '16px', left: '50%', transform: 'translateX(-50%)', backgroundColor: 'var(--surface-color)', color: 'var(--text-main)', padding: '12px 20px', borderRadius: '12px', zIndex: 99999, maxWidth: '90vw', fontSize: '13px', fontWeight: 600, boxShadow: '0 4px 20px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', gap: '10px', animation: 'slideDown 0.3s ease-out' }}>
           <MessageCircle size={18} color="#10b981" />
           {newChatPopup}
         </div>
@@ -191,8 +191,8 @@ export default function Messages() {
       </div>
 
       {/* Input */}
-      <div style={{ padding: '12px 16px', backgroundColor: 'white', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '10px', alignItems: 'center', paddingBottom: 'calc(12px + env(safe-area-inset-bottom))' }}>
-        <input type="text" placeholder="Ketik koordinasi Anda..." value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSend()} style={{ flex: 1, padding: '12px 16px', borderRadius: '24px', border: '1px solid #e2e8f0', outline: 'none', backgroundColor: '#f8fafc', fontSize: '14px' }} />
+      <div style={{ padding: '12px 16px', backgroundColor: 'var(--surface-color)', borderTop: '1px solid var(--border-color)', display: 'flex', gap: '10px', alignItems: 'center', paddingBottom: 'calc(12px + env(safe-area-inset-bottom))' }}>
+        <input type="text" placeholder="Ketik koordinasi Anda..." value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSend()} style={{ flex: 1, padding: '12px 16px', borderRadius: '24px', border: '1px solid var(--border-color)', outline: 'none', backgroundColor: 'var(--bg-color)', color: 'var(--text-main)', fontSize: '14px' }} />
         <button onClick={handleSend} disabled={sending || !input.trim()} style={{ width: '44px', height: '44px', borderRadius: '50%', backgroundColor: sending || !input.trim() ? '#cbd5e1' : '#ef4444', color: 'white', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: sending || !input.trim() ? 'not-allowed' : 'pointer', transition: 'all 0.2s' }}>
           <Send size={18} />
         </button>
