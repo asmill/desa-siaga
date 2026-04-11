@@ -77,7 +77,7 @@ export default function Messages() {
             return (
               <div key={msg.id || idx} style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
                 {!isMe && <span style={{ fontSize: '11px', color: '#64748b', marginBottom: '2px', marginLeft: '4px', fontWeight: 600 }}>{msg.sender_name}</span>}
-                <div style={{ maxWidth: '80%', padding: '10px 14px', borderRadius: '16px', fontSize: '14px', backgroundColor: isMe ? '#94a3b8' : 'white', color: isMe ? 'white' : '#1e293b', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderBottomRightRadius: isMe ? '4px' : '16px', borderBottomLeftRadius: !isMe ? '4px' : '16px' }}>
+                <div style={{ maxWidth: '80%', padding: '10px 14px', borderRadius: '16px', fontSize: '14px', backgroundColor: isMe ? '#94a3b8' : 'var(--surface-color)', color: isMe ? 'white' : 'var(--text-main)', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderBottomRightRadius: isMe ? '4px' : '16px', borderBottomLeftRadius: !isMe ? '4px' : '16px', border: isMe ? 'none' : '1px solid var(--border-color)' }}>
                   {msg.message}
                   <div style={{ fontSize: '10px', opacity: 0.65, marginTop: '4px', textAlign: 'right' }}>{formatTime(msg.created_at)}</div>
                 </div>

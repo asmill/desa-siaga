@@ -22,7 +22,18 @@ export default function BottomNav() {
     { name: 'Profil', icon: <User size={24} />, path: '/profil' },
   ];
 
-  const tabs = role === 'Supir' ? driverTabs : communityTabs;
+  const mitraTabs = [
+    { name: 'Beranda', icon: <Home size={24} />, path: '/' },
+    { name: 'Radar', icon: <MapIcon size={24} />, path: '/radar' },
+    { name: 'Profil', icon: <User size={24} />, path: '/profil' },
+  ];
+
+  let tabs = communityTabs;
+  if (role === 'Supir') {
+    tabs = driverTabs;
+  } else if (role === 'Mitra' || role === 'Relawan' || role === 'PEMDES' || role === 'DPMD') {
+    tabs = mitraTabs;
+  }
 
   return (
     <nav className="bottom-nav">

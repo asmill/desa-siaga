@@ -150,7 +150,7 @@ export default function DriverDashboard() {
   };
 
   return (
-    <div style={{ padding: '24px', paddingBottom: '90px', display: 'flex', flexDirection: 'column', gap: '24px', backgroundColor: '#f8fafc', minHeight: '100vh' }}>
+    <div style={{ padding: '24px', paddingBottom: '90px', display: 'flex', flexDirection: 'column', gap: '24px', backgroundColor: 'var(--bg-color)', minHeight: '100vh' }}>
 
 
       {/* SOS Alert Panel - Incoming SOS */}
@@ -394,7 +394,7 @@ export default function DriverDashboard() {
             ))}
           </div>
         ) : (
-          <div style={{ padding: '24px', textAlign: 'center', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
+          <div style={{ padding: '24px', textAlign: 'center', backgroundColor: 'var(--surface-color)', borderRadius: '12px', border: '1px dashed var(--border-color)' }}>
             <p style={{ margin: 0, fontSize: '13px', color: '#94a3b8' }}>Tidak ada jadwal peminjaman saat ini.</p>
           </div>
         )}
@@ -455,7 +455,7 @@ export default function DriverDashboard() {
       
       {/* Chat Modal for Driver */}
       {showChat && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'white', zIndex: 2000, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'var(--bg-color)', zIndex: 2000, display: 'flex', flexDirection: 'column' }}>
           <div style={{ padding: '16px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '16px', backgroundColor: '#2563eb', color: 'white' }}>
             <button onClick={() => setShowChat(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'white', display: 'flex', alignItems: 'center' }}>
               <ChevronLeft size={28} />
@@ -465,7 +465,7 @@ export default function DriverDashboard() {
               <p style={{ margin: 0, fontSize: '12px', opacity: 0.8 }}>Pasien: {activeSOS?.patientName}</p>
             </div>
           </div>
-          <div style={{ flex: 1, padding: '16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', backgroundColor: '#f8fafc' }}>
+          <div style={{ flex: 1, padding: '16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', backgroundColor: 'var(--bg-color)' }}>
             {chatMessages.map((msg, i) => {
                const isMe = msg.sender_id === userProfile?.id;
                const timeStr = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -498,7 +498,7 @@ export default function DriverDashboard() {
                );
             })}
           </div>
-          <div style={{ padding: '16px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '12px', backgroundColor: 'white' }}>
+          <div style={{ padding: '16px', borderTop: '1px solid var(--border-color)', display: 'flex', gap: '12px', backgroundColor: 'var(--bg-color)' }}>
             <input 
               type="text" 
               style={{ flex: 1, padding: '12px 16px', borderRadius: '20px', border: '1px solid #cbd5e1', outline: 'none' }}

@@ -463,7 +463,7 @@ export default function Home() {
     }
 
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#f8fafc', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: 'var(--bg-color)', overflow: 'hidden' }}>
         <div style={{ flex: 1, position: 'relative' }}>
           <MapContainer center={userCoords} zoom={14} style={{ height: '100%', width: '100%' }} zoomControl={false}>
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />

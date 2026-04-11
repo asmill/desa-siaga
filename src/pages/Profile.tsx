@@ -167,10 +167,9 @@ export default function Profile() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', paddingBottom: '80px', backgroundColor: '#f8fafc' }}>
-      
-      {/* Header Profile Info */}
-      <div style={{ padding: '32px 24px 24px', backgroundColor: role === 'Supir' ? '#2563eb' : 'var(--primary-red)', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', paddingBottom: '80px', backgroundColor: 'var(--bg-color)' }}>
+      {/* Header Profile */}
+      <div style={{ padding: '32px 24px 24px', backgroundColor: role === 'Supir' ? (isDarkMode ? '#1e3a8a' : '#2563eb') : (isDarkMode ? '#7f1d1d' : 'var(--primary-red)'), color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         {/* Photo Avatar */}
         <div style={{ position: 'relative', marginBottom: '16px' }}>
           <div
