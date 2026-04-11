@@ -24,6 +24,7 @@ export interface SOSMessage {
   sender_id: string;
   message: string;
   created_at: string;
+  sender_photo?: string;
 }
 
 // Distance Helper (Haversine Formula) in KM
@@ -42,6 +43,8 @@ export interface UserProfile {
   id: string;
   phone: string;
   full_name: string;
+  mitraCategory?: string; // Babinsa, Kamtibmas, Klinik, Kader, Pemadam, Bidan, Linmas
+  photo_url?: string;
 }
 
 export type DriverStatusType = 'STANDBY' | 'ON_JOB' | 'OFFLINE' | 'ON_RESPONSE' | 'ON_DUTY';
@@ -50,6 +53,7 @@ interface AppState {
   userProfile: UserProfile | null;
   role: UserRole;
   isVerified: boolean;
+  isDarkMode: boolean;
   userCoords: [number, number];
   activeSOS: ActiveSOS | null;
   driverStatus: DriverStatusType;
@@ -61,6 +65,7 @@ interface AppState {
   setUserProfile: (profile: UserProfile | null) => void;
   setRole: (role: UserRole) => void;
   setIsVerified: (status: boolean) => void;
+  setIsDarkMode: (status: boolean) => void;
   setUserCoords: (coords: [number, number]) => void;
   showNotification: (message: string, type?: 'success' | 'error' | 'info') => void;
   
@@ -86,6 +91,7 @@ export const useStore = create<AppState>()(
       userProfile: null,
       role: 'Masyarakat',
       isVerified: true, 
+      isDarkMode: false,
       userCoords: [-6.621000, 107.771000], 
       activeSOS: null,
       driverStatus: 'STANDBY',
@@ -97,6 +103,14 @@ export const useStore = create<AppState>()(
       setUserProfile: (profile) => set({ userProfile: profile }),
       setRole: (role) => set({ role }),
       setIsVerified: (status) => set({ isVerified: status }),
+      setIsDarkMode: (status) => {
+        set({ isDarkMode: status });
+        if (status) {
+          document.body.classList.add('dark-mode');
+        } else {
+          document.body.classList.remove('dark-mode');
+        }
+      },
       setUserCoords: (coords) => set({ userCoords: coords }),
       
       showNotification: (message, type = 'info') => {
@@ -113,32 +127,60 @@ export const useStore = create<AppState>()(
         if (!userProfile) return;
 
         let targetedDriverId: string | null = null;
-        let standbyDriverIds: string[] = [];
-        
-        // Find closest standby driver from Active Ambulances
+        let standbyDriverIds: string[] = []; // Target utama (yang ditugaskan menanggapi)
+        let pushNotifIds: string[] = []; // Notifikasi push
+        let isAmbulansRouting = true;
+
+        if (['Kebakaran'].includes(emergencyType)) {
+            isAmbulansRouting = false;
+        } else if (['Kriminal', 'Bencana Alam'].includes(emergencyType)) {
+            isAmbulansRouting = false;
+        }
+
         try {
-           const { data: activeAmbs } = await supabase.from('ambulances').select('driver_id').eq('status', 'Stand By').not('driver_id', 'is', null);
-           
-           if (activeAmbs && activeAmbs.length > 0) {
-              standbyDriverIds = activeAmbs.map((a: any) => a.driver_id);
-              
-              const { data: drivers } = await supabase.from('profiles').select('*').in('id', standbyDriverIds);
-              if (drivers && drivers.length > 0) {
-                 let minDistance = Infinity;
-                 for (const d of drivers) {
-                    if (d.lat && d.lng) {
-                       const dist = getDistance(coords[0], coords[1], d.lat, d.lng);
-                       if (dist < minDistance) {
-                          minDistance = dist;
-                          targetedDriverId = d.id;
-                       }
-                    }
-                 }
-                 if (!targetedDriverId) targetedDriverId = drivers[0].id;
-              }
-           }
+            if (isAmbulansRouting) {
+               const { data: activeAmbs } = await supabase.from('ambulances').select('driver_id').eq('status', 'Stand By').not('driver_id', 'is', null);
+               if (activeAmbs && activeAmbs.length > 0) {
+                  standbyDriverIds = activeAmbs.map((a: any) => a.driver_id);
+               }
+               // Notif biasa ke Klinik, Kader, Linmas (+ Bidan)
+               let mitraTypes = ['Klinik', 'Kader', 'Linmas'];
+               if (emergencyType === 'Melahirkan') mitraTypes.push('Bidan');
+               const { data: mitras } = await supabase.from('profiles').select('id').in('mitra_category', mitraTypes);
+               if (mitras) pushNotifIds = [...pushNotifIds, ...mitras.map(m => m.id)];
+            } else {
+               let mainTargetTypes: string[] = [];
+               let notifTargetTypes: string[] = [];
+               if (emergencyType === 'Kebakaran') {
+                   mainTargetTypes = ['Pemadam'];
+                   notifTargetTypes = ['Babinsa', 'Kamtibmas', 'Linmas'];
+               } else {
+                   mainTargetTypes = ['Babinsa', 'Kamtibmas'];
+                   notifTargetTypes = ['Linmas'];
+               }
+               const { data: mains } = await supabase.from('profiles').select('id').in('mitra_category', mainTargetTypes);
+               if (mains && mains.length > 0) standbyDriverIds = mains.map(m => m.id);
+               
+               const { data: notifs } = await supabase.from('profiles').select('id').in('mitra_category', notifTargetTypes);
+               if (notifs) pushNotifIds = [...pushNotifIds, ...notifs.map(n => n.id)];
+            }
+
+            // Find closest from standbyDriverIds for 'targetedDriverId'
+            if (standbyDriverIds.length > 0) {
+               const { data: drivers } = await supabase.from('profiles').select('*').in('id', standbyDriverIds);
+               if (drivers && drivers.length > 0) {
+                  let minDist = Infinity;
+                  for (const d of drivers) {
+                     if (d.lat && d.lng) {
+                        const dist = getDistance(coords[0], coords[1], d.lat, d.lng);
+                        if (dist < minDist) { minDist = dist; targetedDriverId = d.id; }
+                     }
+                  }
+                  if (!targetedDriverId) targetedDriverId = drivers[0].id;
+               }
+            }
         } catch(e) {
-           console.error("Failed to find closest driver", e);
+           console.error("Gagal mendistribusikan sinyal SOS:", e);
         }
 
         // Insert into Supabase
@@ -163,9 +205,10 @@ export const useStore = create<AppState>()(
 
         // --- Eksekusi Push Notification via Vercel Serverless (Bypass CORS) ---
         try {
-           if (standbyDriverIds.length > 0) {
+           const allTargets = Array.from(new Set([...standbyDriverIds, ...pushNotifIds]));
+           if (allTargets.length > 0) {
              const payload = {
-                targetIds: standbyDriverIds,
+                targetIds: allTargets,
                 emergencyType
              };
              await fetch('/api/push', {
@@ -257,9 +300,17 @@ export const useStore = create<AppState>()(
       },
       
       fetchChatMessages: async (eventId) => {
-         const { data } = await supabase.from('sos_messages').select('*').eq('event_id', eventId).order('created_at', { ascending: true });
-         if (data) {
-            set({ chatMessages: data });
+         const { data, error } = await supabase.from('sos_messages').select(`*, profiles:sender_id (photo_url)`).eq('event_id', eventId).order('created_at', { ascending: true });
+         if (data && !error) {
+            const mapped = data.map((d: any) => ({
+               id: d.id, sender_name: d.sender_name, sender_id: d.sender_id, message: d.message, created_at: d.created_at,
+               sender_photo: d.profiles?.photo_url
+            }));
+            set({ chatMessages: mapped });
+         } else if (error) {
+            // fallback if relation doesn't exist
+            const fallback = await supabase.from('sos_messages').select('*').eq('event_id', eventId).order('created_at', { ascending: true });
+            if (fallback.data) set({ chatMessages: fallback.data });
          }
       },
       

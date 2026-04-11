@@ -172,12 +172,17 @@ export default function Messages() {
           chatMessages.map((msg: any, idx: number) => {
             const isMe = msg.sender_id === userProfile?.id;
             return (
-              <div key={msg.id || idx} style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
-                {!isMe && <span style={{ fontSize: '11px', color: '#64748b', marginBottom: '2px', marginLeft: '4px', fontWeight: 600 }}>{msg.sender_name || 'Tim Darurat'}</span>}
-                <div style={{ maxWidth: '80%', padding: '10px 14px', borderRadius: '16px', fontSize: '14px', lineHeight: 1.5, backgroundColor: isMe ? '#ef4444' : 'white', color: isMe ? 'white' : '#1e293b', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderBottomRightRadius: isMe ? '4px' : '16px', borderBottomLeftRadius: !isMe ? '4px' : '16px' }}>
-                  {msg.message}
-                  <div style={{ fontSize: '10px', opacity: 0.65, marginTop: '4px', textAlign: 'right' }}>{formatTime(msg.created_at)}</div>
-                </div>
+              <div key={msg.id || idx} style={{ display: 'flex', flexDirection: isMe ? 'row-reverse' : 'row', alignItems: 'flex-end', gap: '8px', alignSelf: isMe ? 'flex-end' : 'flex-start', maxWidth: '85%' }}>
+                 <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#e2e8f0', backgroundImage: msg.sender_photo ? `url(${msg.sender_photo})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {!msg.sender_photo && <User size={18} color="#94a3b8" />}
+                 </div>
+                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
+                   {!isMe && <span style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px', marginLeft: '4px', fontWeight: 600 }}>{msg.sender_name || 'Tim Darurat'}</span>}
+                   <div style={{ padding: '10px 14px', borderRadius: '16px', fontSize: '14px', lineHeight: 1.5, backgroundColor: isMe ? '#ef4444' : 'var(--surface-color)', color: isMe ? 'white' : 'var(--text-main)', boxShadow: '0 2px 6px rgba(0,0,0,0.06)', borderBottomRightRadius: isMe ? '4px' : '16px', borderBottomLeftRadius: !isMe ? '4px' : '16px', border: isMe ? 'none' : '1px solid var(--border-color)' }}>
+                     {msg.message}
+                     <div style={{ fontSize: '10px', opacity: 0.65, marginTop: '4px', textAlign: 'right' }}>{formatTime(msg.created_at)}</div>
+                   </div>
+                 </div>
               </div>
             );
           })

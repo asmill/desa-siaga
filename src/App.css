@@ -12,6 +12,13 @@
   box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
 }
 
+body.dark-mode .leaflet-layer,
+body.dark-mode .leaflet-control-zoom-in,
+body.dark-mode .leaflet-control-zoom-out,
+body.dark-mode .leaflet-control-attribution {
+  filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+}
+
 .bottom-nav {
   position: fixed;
   bottom: 0;

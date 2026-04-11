@@ -3,9 +3,34 @@ import OneSignal from 'react-onesignal';
 import { CheckCircle, Navigation, Phone, AlertCircle, CalendarClock, MapPin, Activity, MessageCircle, ChevronLeft } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { supabase } from '../../services/supabaseClient';
+import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
+import L from 'leaflet';
+import { renderToString } from 'react-dom/server';
+
+const driverIcon = L.divIcon({
+  className: 'custom-icon',
+  html: renderToString(
+    <div style={{ backgroundColor: '#2563eb', padding: '8px', borderRadius: '50%', boxShadow: '0 4px 6px rgba(0,0,0,0.2)', border: '2px solid white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <Navigation size={20} color="white" />
+    </div>
+  ),
+  iconSize: [36, 36],
+  iconAnchor: [18, 18]
+});
+
+const patientIcon = L.divIcon({
+  className: 'custom-icon pulse-sos',
+  html: renderToString(
+    <div style={{ backgroundColor: '#ef4444', padding: '10px', borderRadius: '50%', boxShadow: '0 0 15px #ef4444', border: '2px solid white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <AlertCircle size={24} color="white" />
+    </div>
+  ),
+  iconSize: [44, 44],
+  iconAnchor: [22, 22]
+});
 
 export default function DriverDashboard() {
-  const { activeSOS, acceptSOS, updateSOSStatus, resetSOS, driverStatus, setDriverStatus, setUserCoords, userProfile, chatMessages, sendChatMessage, showNotification } = useStore();
+  const { activeSOS, acceptSOS, updateSOSStatus, resetSOS, driverStatus, setDriverStatus, userCoords, setUserCoords, userProfile, chatMessages, sendChatMessage, showNotification, isDarkMode } = useStore();
   const [bookings, setBookings] = useState<any[]>([]);
   const [historyLog, setHistoryLog] = useState<any[]>([]);
   const [selectedDestination, setSelectedDestination] = useState<string>("RSUD Terpadu Subang (3KM)");
@@ -171,14 +196,42 @@ export default function DriverDashboard() {
 
       {/* Active Mission Panel */}
       {activeSOS && activeSOS.status !== 'PENDING' && activeSOS.status !== 'COMPLETED' && activeSOS.status !== 'IDLE' && activeSOS.driverName === userProfile?.full_name && (
-        <div className="card" style={{ border: `2px solid ${activeSOS.status === 'EN_ROUTE_TO_HOSPITAL' ? '#3b82f6' : activeSOS.status === 'RETURNING_TO_BASE' ? '#64748b' : '#10b981'}`, backgroundColor: `${activeSOS.status === 'EN_ROUTE_TO_HOSPITAL' ? '#eff6ff' : activeSOS.status === 'RETURNING_TO_BASE' ? '#f1f5f9' : '#ecfdf5'}`, padding: '20px' }}>
-          <h2 style={{ margin: '0 0 16px', fontSize: '16px', color: `${activeSOS.status === 'EN_ROUTE_TO_HOSPITAL' ? '#1d4ed8' : activeSOS.status === 'RETURNING_TO_BASE' ? '#334155' : '#047857'}`, display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="card" style={{ border: `2px solid ${activeSOS.status === 'EN_ROUTE_TO_HOSPITAL' ? '#3b82f6' : activeSOS.status === 'RETURNING_TO_BASE' ? '#64748b' : '#10b981'}`, backgroundColor: `${activeSOS.status === 'EN_ROUTE_TO_HOSPITAL' ? (isDarkMode ? '#1e3a8a' : '#eff6ff') : activeSOS.status === 'RETURNING_TO_BASE' ? (isDarkMode ? '#1e293b' : '#f1f5f9') : (isDarkMode ? '#064e3b' : '#ecfdf5')}`, padding: '20px' }}>
+          <h2 style={{ margin: '0 0 16px', fontSize: '16px', color: `${activeSOS.status === 'EN_ROUTE_TO_HOSPITAL' ? '#3b82f6' : activeSOS.status === 'RETURNING_TO_BASE' ? '#64748b' : '#10b981'}`, display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Navigation size={18} /> 
             {activeSOS.status === 'ACCEPTED' ? 'MENGARAH KE TITIK DARURAT' : 
              activeSOS.status === 'ARRIVED_AT_SCENE' ? 'TELAH TIBA DI LOKASI TKP' : 
              activeSOS.status === 'EN_ROUTE_TO_HOSPITAL' ? 'MENGANTAR MENUJU RUMAH SAKIT' :
              activeSOS.status === 'AT_DESTINATION' ? 'TIBA DI RUMAH SAKIT' : 'PERJALANAN KEMBALI KE POS'}
           </h2>
+
+          {/* REALTIME MISSION TRACKER MAP */}
+          <div style={{ height: '250px', width: '100%', borderRadius: '12px', overflow: 'hidden', marginBottom: '20px', border: '1px solid var(--border-color)', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+            <MapContainer center={activeSOS.patientCoords} zoom={14} style={{ height: '100%', width: '100%', zIndex: 0 }} zoomControl={false}>
+              <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+              
+              <Marker position={activeSOS.patientCoords} icon={patientIcon}>
+                <Popup>
+                  <div style={{ textAlign: 'center' }}>
+                    <strong style={{ fontSize: '14px', display: 'block', color: '#ef4444' }}>Titik {activeSOS.emergencyType}</strong>
+                    Pasien: {activeSOS.patientName}
+                  </div>
+                </Popup>
+              </Marker>
+              
+              <Marker position={userCoords} icon={driverIcon}>
+                <Popup>Posisi Anda (Armada)</Popup>
+              </Marker>
+
+              <Polyline 
+                positions={[userCoords, activeSOS.patientCoords]} 
+                color="#ef4444" 
+                weight={3} 
+                dashArray="10, 10" 
+                opacity={0.8}
+              />
+            </MapContainer>
+          </div>
           <div style={{ marginBottom: '20px', padding: '16px', backgroundColor: 'white', borderRadius: '12px' }}>
             <p style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: 700 }}>Pasien: {activeSOS.patientName}</p>
             <p style={{ margin: '0 0 12px', fontSize: '13px', color: '#64748b' }}>Jenis Darurat: {activeSOS.emergencyType}</p>
@@ -388,19 +441,29 @@ export default function DriverDashboard() {
                const isMe = msg.sender_id === userProfile?.id;
                const timeStr = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                return (
-                <div key={i} style={{ alignSelf: isMe ? 'flex-end' : 'flex-start', maxWidth: '80%' }}>
-                  <div style={{ 
-                    padding: '12px 16px', 
-                    borderRadius: '16px', 
-                    backgroundColor: isMe ? '#2563eb' : '#e2e8f0',
-                    color: isMe ? 'white' : '#1e293b',
-                    borderBottomRightRadius: isMe ? '4px' : '16px',
-                    borderBottomLeftRadius: isMe ? '16px' : '4px',
-                  }}>
-                    {msg.message}
+                <div key={i} style={{ alignSelf: isMe ? 'flex-end' : 'flex-start', maxWidth: '85%', display: 'flex', gap: '10px', alignItems: 'flex-end', flexDirection: isMe ? 'row-reverse' : 'row' }}>
+                  {/* Photo Avatar */}
+                  <div style={{ width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0, backgroundColor: '#e2e8f0', backgroundImage: msg.sender_photo ? `url(${msg.sender_photo})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                     {!msg.sender_photo && <User size={18} color="#94a3b8" />}
                   </div>
-                  <div style={{ fontSize: '10px', color: '#64748b', marginTop: '4px', textAlign: isMe ? 'right' : 'left' }}>
-                    {msg.sender_name} • {timeStr}
+                  <div>
+                    <div style={{ 
+                      padding: '12px 16px', 
+                      borderRadius: '16px', 
+                      backgroundColor: isMe ? '#2563eb' : 'var(--surface-color)',
+                      color: isMe ? 'white' : 'var(--text-main)',
+                      borderBottomRightRadius: isMe ? '4px' : '16px',
+                      borderBottomLeftRadius: isMe ? '16px' : '4px',
+                      boxShadow: '0 3px 6px rgba(0,0,0,0.08)',
+                      border: isMe ? 'none' : '1px solid var(--border-color)',
+                      fontSize: '14px',
+                      lineHeight: '1.5'
+                    }}>
+                      {msg.message}
+                    </div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px', textAlign: isMe ? 'right' : 'left' }}>
+                      {msg.sender_name} • {timeStr}
+                    </div>
                   </div>
                 </div>
                );

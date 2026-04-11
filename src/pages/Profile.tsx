@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { User, ShieldCheck, ShieldAlert, Edit3, Ambulance, Loader2, Save, Camera } from 'lucide-react';
+import { User, ShieldCheck, ShieldAlert, Edit3, Ambulance, Loader2, Save, Camera, Moon, Sun } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { supabase } from '../services/supabaseClient';
 import { getProvinces, getRegencies, getDistricts, getVillages } from '../services/regionService';
 
 export default function Profile() {
-  const { userProfile, role, isVerified, setUserProfile, showNotification } = useStore();
+  const { userProfile, role, isVerified, setUserProfile, showNotification, isDarkMode, setIsDarkMode } = useStore();
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -17,7 +17,7 @@ export default function Profile() {
   const [formData, setFormData] = useState({
     phone: '', full_name: '', ktp: '', gender: '',
     dusun: '', rt: '', rw: '', village: '', district: '', regency: '', province: '', address: '', vehicle_id: '',
-    provinceId: '', regencyId: '', districtId: '', villageId: ''
+    mitraCategory: '', provinceId: '', regencyId: '', districtId: '', villageId: ''
   });
 
   const [provinces, setProvinces] = useState<any[]>([]);
@@ -37,6 +37,7 @@ export default function Profile() {
           gender: data.gender || '', dusun: data.dusun || '', rt: data.rt || '', 
           rw: data.rw || '', village: data.village || '', district: data.district || '', 
           regency: data.regency || '', province: data.province || '', address: data.address || '',
+          mitraCategory: data.mitra_category || '',
           vehicle_id: '', provinceId: '', regencyId: '', districtId: '', villageId: ''
         };
         if (data.photo_url) setPhotoUrl(data.photo_url);
@@ -95,13 +96,14 @@ export default function Profile() {
         .update({
           full_name: formData.full_name, ktp: formData.ktp, gender: formData.gender,
           dusun: formData.dusun, rt: formData.rt, rw: formData.rw, village: formData.village, 
-          district: formData.district, regency: formData.regency, province: formData.province, address: formData.address
+          district: formData.district, regency: formData.regency, province: formData.province, address: formData.address,
+          mitra_category: role === 'Mitra' ? formData.mitraCategory : undefined
         })
         .eq('phone', userProfile?.phone);
       
       if (profErr) throw profErr;
 
-      setUserProfile({ ...userProfile, full_name: formData.full_name } as any);
+      setUserProfile({ ...userProfile, full_name: formData.full_name, mitraCategory: formData.mitraCategory } as any);
       showNotification('Profil demografi berhasil diperbarui!', 'success');
       setIsEditing(false);
     } catch (err) {
@@ -126,8 +128,9 @@ export default function Profile() {
         const base64 = ev.target?.result as string;
         setPhotoUrl(base64);
         await supabase.from('profiles').update({ photo_url: base64 }).eq('phone', userProfile?.phone);
+        setUserProfile({ ...userProfile, photo_url: base64 } as any);
         showNotification('Foto profil berhasil diperbarui!', 'success');
-        setUploadingPhoto(false);
+        setTimeout(() => setUploadingPhoto(false), 300);
       };
       reader.readAsDataURL(file);
     } catch {
@@ -211,6 +214,25 @@ export default function Profile() {
       {/* Content Area */}
       <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
         
+        {/* Toggle Dark Mode */}
+        <div className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+             <div style={{ padding: '8px', backgroundColor: isDarkMode ? '#1e293b' : '#f1f5f9', borderRadius: '10px' }}>
+                {isDarkMode ? <Moon size={20} color="#38bdf8" /> : <Sun size={20} color="#f59e0b" />}
+             </div>
+             <div>
+               <h3 style={{ margin: 0, fontSize: '15px' }}>Mode Tampilan</h3>
+               <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-muted)' }}>{isDarkMode ? 'Gelap' : 'Terang'}</p>
+             </div>
+          </div>
+          <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+             <input type="checkbox" checked={isDarkMode} onChange={(e) => setIsDarkMode(e.target.checked)} style={{ display: 'none' }} />
+             <div style={{ width: '44px', height: '24px', backgroundColor: isDarkMode ? '#3b82f6' : '#cbd5e1', borderRadius: '12px', position: 'relative', transition: 'background-color 0.2s' }}>
+                <div style={{ width: '20px', height: '20px', backgroundColor: 'white', borderRadius: '50%', position: 'absolute', top: '2px', left: isDarkMode ? '22px' : '2px', transition: 'left 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }} />
+             </div>
+          </label>
+        </div>
+
         {/* Profile Info Card */}
         <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -233,9 +255,25 @@ export default function Profile() {
             </div>
 
             <div>
-              <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>Nama Lengkap</label>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>Nama Lengkap</label>
               <input className="input-base" value={formData.full_name} onChange={e => setFormData({...formData, full_name: e.target.value})} disabled={!isEditing} />
             </div>
+
+            {role === 'Mitra' && (
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>Kategori Mitra / Instansi</label>
+                <select className="input-base" value={formData.mitraCategory} onChange={e => setFormData({...formData, mitraCategory: e.target.value})} disabled={!isEditing} style={{ padding: '12px' }}>
+                  <option value="">-- Pilih Satuan --</option>
+                  <option value="Babinsa">TNI / Babinsa</option>
+                  <option value="Kamtibmas">Polri / Bhabinkamtibmas</option>
+                  <option value="Klinik">Klinik / Puskesmas</option>
+                  <option value="Kader">Kader Desa Siaga</option>
+                  <option value="Pemadam">Pemadam Kebakaran</option>
+                  <option value="Bidan">Bidan Desa</option>
+                  <option value="Linmas">LINMAS</option>
+                </select>
+              </div>
+            )}
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>

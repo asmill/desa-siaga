@@ -446,19 +446,29 @@ export default function Home() {
                  const isMe = msg.sender_id === userProfile?.id;
                  const timeStr = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                  return (
-                <div key={i} style={{ alignSelf: isMe ? 'flex-end' : 'flex-start', maxWidth: '80%' }}>
-                  <div style={{ 
-                    padding: '12px 16px', 
-                    borderRadius: '16px', 
-                    backgroundColor: isMe ? 'var(--primary-red)' : '#f1f5f9',
-                    color: isMe ? 'white' : 'var(--text-main)',
-                    borderBottomRightRadius: isMe ? '4px' : '16px',
-                    borderBottomLeftRadius: isMe ? '16px' : '4px',
-                  }}>
-                    {msg.message}
+                <div key={i} style={{ alignSelf: isMe ? 'flex-end' : 'flex-start', maxWidth: '85%', display: 'flex', gap: '10px', alignItems: 'flex-end', flexDirection: isMe ? 'row-reverse' : 'row' }}>
+                  {/* Photo Avatar */}
+                  <div style={{ width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0, backgroundColor: '#e2e8f0', backgroundImage: msg.sender_photo ? `url(${msg.sender_photo})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                     {!msg.sender_photo && <User size={18} color="#94a3b8" />}
                   </div>
-                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px', textAlign: isMe ? 'right' : 'left' }}>
-                    {msg.sender_name} • {timeStr}
+                  <div>
+                    <div style={{ 
+                      padding: '12px 16px', 
+                      borderRadius: '16px', 
+                      backgroundColor: isMe ? '#2563eb' : 'var(--surface-color)',
+                      color: isMe ? 'white' : 'var(--text-main)',
+                      borderBottomRightRadius: isMe ? '4px' : '16px',
+                      borderBottomLeftRadius: isMe ? '16px' : '4px',
+                      boxShadow: '0 3px 6px rgba(0,0,0,0.08)',
+                      border: isMe ? 'none' : '1px solid var(--border-color)',
+                      fontSize: '14px',
+                      lineHeight: '1.5'
+                    }}>
+                      {msg.message}
+                    </div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px', textAlign: isMe ? 'right' : 'left' }}>
+                      {msg.sender_name} • {timeStr}
+                    </div>
                   </div>
                 </div>
                  );
